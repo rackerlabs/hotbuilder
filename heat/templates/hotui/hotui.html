@@ -1,0 +1,59 @@
+<!--
+    Copyright 2014 Rackspace
+
+    Licensed under the Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+        http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+
+{% extends 'hotui/hotui_base.html' %}
+
+{% load humanize %}
+{% load heat %}
+
+{% block page %}
+
+<div id="hotui_app">
+    <div id="hotui_bottom_strip">&copy; Rackspace {{ footer_year }}</div>
+    <div id="hotui_topology">
+    </div>
+    <div id="hotui_overlay">
+        <div id="hotui_nav" class="panel-heading">
+            <ul class="nav nav-pills">
+                <li class="active"><a href="#">Add Resource</a></li>
+                <li class=""><a href="#">Parameters</a></li>
+                <li class=""><a href="#">Outputs</a></li>
+                <li class=""><a href="#">Template Options</a></li>
+            </ul>
+        </div>
+        <div id="hotui_side_panel">
+            <div class="background well"></div>
+            <div id="hotui_side_panel_content"></div>
+            <div class="close_button">x</div>
+        </div>
+        <div class="load_from_url">Load From URL</div>
+        <div class="get_json">Get Template</div>
+    </div>
+</div>
+
+<script>
+    var STACK_ENDPOINT = '{{ stack_endpoint|safe }}',
+        STACK_REGION = '{{ region_value|safe }}';
+</script>
+<script src='{{ STATIC_URL }}js/hotui/util.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}js/hotui/barricade.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}js/hotui/hot.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}js/hotui/form_elements.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}js/hotui/topology.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}js/hotui/side_panel_controller.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}js/hotui/hotui.js' type='text/javascript' charset="utf-8"></script>
+
+{% endblock %}

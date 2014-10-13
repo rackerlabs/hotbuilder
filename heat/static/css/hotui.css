@@ -1,0 +1,489 @@
+/* Copyright 2014 Rackspace
+  
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+  
+       http://www.apache.org/licenses/LICENSE-2.0
+  
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
+#hotui_app {
+    background-color: white;
+    bottom: 20px;
+    left: 0;
+    overflow: hidden;
+    position: absolute;
+    right: 0;
+    top: 55px; /* navbar is at 55px versus 50px due to
+                  .divider-vertical (height: 55px)
+                  .navbar-nav > li > a (padding-top: 20px adds 5px)
+               */
+}
+
+#hotui_bottom_strip {
+    background-color: black;
+    bottom: 0;
+    color: white;
+    height: 20px;
+    position: fixed;
+    text-align: center;
+    width: 100%;
+}
+
+/*
+ * Topology
+ */
+#hotui_topology {
+    bottom: 0;
+    left: 0;
+    position:absolute;
+    right: 0;
+    top: 0;
+}
+
+.node {
+}
+
+.node text {
+    font-size: 6px;
+}
+
+.link {
+    stroke-width: 1px;
+}
+
+.link.depends_on {
+    stroke: green;
+    fill: green;
+}
+
+.link.attribute {
+    stroke: blue;
+    fill: blue;
+}
+
+.link.resource {
+    stroke: red;
+    fill: red;
+}
+
+.label > .background {
+    fill: rgba(255, 255, 255, 0.9);
+    stroke: rgba(52, 128, 194, 0.4); /* === #3480C2 */
+}
+
+/*
+ * Overlay
+ */
+#hotui_overlay {
+}
+
+#hotui_overlay > .panel-heading {
+    padding: 0;
+}
+
+#hotui_overlay > .get_json,
+#hotui_overlay > .load_from_url {
+    background-color: red;
+    cursor: pointer;
+    height: 50px;
+    width: 200px;
+    text-align:center;
+    position: absolute;
+    right: 5px;
+    border-radius: 10px;
+    line-height: 50px;
+    font-size: 20px;
+}
+
+#hotui_overlay > .get_json {
+    top: 5px;
+}
+
+#hotui_overlay > .load_from_url {
+    top: 60px;
+}
+
+.load_from_url_input {
+    background-color: white;
+    border: 1px solid black;
+    cursor: default;
+    font-size: 18px;
+    line-height: 18px;
+    padding: 10px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    white-space: nowrap;
+}
+
+.load_from_url_input > input {
+    width: 300px;
+}
+
+.load_from_url_input > .load_button {
+    background-color: lime;
+    cursor: pointer;
+    display: inline-block;
+    margin: 5px;
+    padding: 5px;
+}
+
+.load_from_url_input > .close_button {
+    background-color: red;
+    cursor: pointer;
+    display: inline-block;
+    margin: 5px;
+    padding: 5px;
+}
+
+#hotui_nav {
+    background-color: white;
+    border-radius: 4px;
+    left: 10px;
+    opacity: 0.95;
+    position: absolute;
+    top: 10px;
+}
+
+#hotui_side_panel {
+    bottom: 10px;
+    left: 10px;
+    position: absolute;
+    width: 40%;
+    top: 60px;
+}
+
+#hotui_side_panel_content {
+    bottom: 5px;
+    left: 5px;
+    overflow-y: auto;
+    padding-right: 5px;
+    position: absolute;
+    right: 5px;
+    top: 25px;
+}
+
+#hotui_side_panel_content::-webkit-scrollbar {
+    width: 8px;
+}
+
+#hotui_side_panel_content::-webkit-scrollbar-track {
+}
+
+#hotui_side_panel_content::-webkit-scrollbar-thumb {
+    background-color: #c0c0c0;
+    border-radius: 4px;
+}
+
+#hotui_side_panel_content hr {
+    border-top: 1px solid #888;
+}
+
+#hotui_side_panel_content .property_map {
+    border: 1px solid black;
+    padding: 1px;
+}
+
+#hotui_side_panel_content .PrimitiveArrayControl {
+    border: 2px solid aqua;
+    padding: 2px;
+}
+
+.Container {
+    border-left: solid 1px #b0b0b0;
+    margin: 2px 0 5px 7px;
+    padding: 2px 0 2px 5px;
+}
+
+.Container > a {
+    cursor: pointer;
+}
+
+.ElementWrapper .Container {
+    margin-left: -10px;
+}
+
+#hotui_side_panel_content .Container:hover {
+    border-left-color: blue;
+}
+
+#hotui_side_panel_content .Container.level1 {
+    border: none;
+    margin-left: 0;
+}
+
+.ElementWrapper {
+    margin-left: 20px;
+    position: relative;
+}
+
+.ElementWrapper .title {
+    cursor: pointer;
+    padding: 2px;
+    position: relative;
+}
+
+.ElementWrapper .title:hover {
+    background-color: rgba(0, 0, 255, 0.05);
+}
+
+.ElementWrapper.collapsed .element_body {
+    display: none;
+}
+
+.ElementWrapper .collapse_button,
+.ElementWrapper .expand_button {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    left: -20px;
+    position: absolute;
+    top: 4px;
+}
+
+.ElementWrapper .expand_button {
+    display: none;
+}
+
+.ElementWrapper.collapsed .expand_button {
+    display: block;
+}
+
+.ElementWrapper.collapsed .collapse_button {
+    display: none;
+}
+
+.ElementWrapper .delete_button {
+    color: red;
+    height: 24px;
+    line-height: 24px;
+    position: absolute;
+    right: 4px;
+    text-align: center;
+    top: 0;
+    width: 20px;
+}
+
+.ElementWrapper .delete_button:hover {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+
+.ElementWrapper.collapsed .title .when_expanded {
+    display: none;
+}
+
+.ElementWrapper.unused > .title {
+    color: #808080;
+}
+
+.ElementWrapper .title > .when_expanded {
+    left: 0;
+    position: absolute;
+    right: 50px;
+    top: 2px;
+}
+
+.ElementWrapper .title > .when_expanded > input[type=text] {
+    line-height: 16px;
+    padding-bottom: 0;
+    padding-left: 0;
+    padding-top: 0;
+    width: 100%;
+}
+
+.ElementWrapper .title > input[type=checkbox] {
+    margin-right: 2px;
+}
+
+.ElementWrapper.level1 .title {
+    font-size: 16px;
+}
+
+.ElementWrapper.level2 .title {
+    font-style: italic;
+}
+
+.ElementWrapper.collapsed .object_value {
+    display: none;
+}
+
+.use_function_button {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 7px;
+    color: blue;
+    margin-left: 2px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.when_expanded + .use_function_button {
+    position: absolute;
+    top: 2px;
+    right: 25px;
+}
+
+.use_function_button:hover {
+    background-color: aqua;
+}
+
+.use_function_button .to_normal {
+    color: red;
+}
+
+#hotui_side_panel > .background {
+    height: 100%;
+    opacity: 0.95;
+    position: absolute;
+    width: 100%;
+}
+
+#hotui_side_panel > .close_button {
+    color: black;
+    cursor: pointer;
+    font-weight: bold;
+    height: 20px;
+    opacity: 0.7;
+    position: absolute;
+    right: 0;
+    text-align: center;
+    top: 0;
+    width: 25px;
+}
+
+#hotui_side_panel > .close_button:hover {
+    opacity: 1;
+}
+
+#hotui_side_panel .StringControl {
+    width: 100%;
+}
+
+#hotui_side_panel .invalid {
+    color: red;
+}
+
+#hotui_json_box {
+    /* just a mess of properties, needs refactoring */
+    cursor: default;
+    background-color: white;
+    position: absolute;
+    right:0;
+    top:0;
+    width: 700px;
+    height: 500px;
+    border: 1px solid black;
+}
+
+#hotui_json_box .json {
+    width: 100%;
+    height: 100%;
+    white-space: nowrap;
+    overflow: auto;
+    font-family:monospace;
+    font-size:16px;
+    line-height:20px;
+    padding:5px;
+    padding-top: 20px;
+    text-align: left;
+}
+
+#hotui_json_box .validate_button {
+    position: absolute;
+    cursor: pointer;
+    background-color: aqua;
+    text-align: center;
+    top: 0;
+    right: 155px;
+    height: 20px;
+    font-size: 16px;
+    line-height: 20px;
+}
+
+#hotui_json_box .update_button {
+    position: absolute;
+    cursor: pointer;
+    background-color: lime;
+    text-align: center;
+    top: 0;
+    right: 25px;
+    height: 20px;
+    font-size: 16px;
+    line-height: 20px;
+}
+
+#hotui_json_box .json_close_button {
+    position: absolute;
+    cursor: pointer;
+    background-color: red;
+    text-align: center;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    font-size: 16px;
+    line-height: 20px;
+}
+
+/*
+ * Panels
+ */
+
+/* Add Resource */
+.resource_draggable {
+    position: relative;
+}
+
+.resource_draggable > div {
+    background-image: url(/static/img/hotui/icon-orchestration.svg);
+    background-size: cover;
+    display: inline-block;
+    height: 25px;
+    margin: 3px;
+    vertical-align: middle;
+    width: 25px;
+}
+
+/* Icon rules are backwards compared to those in topology.js
+   because lower entries have higher precedence in CSS */
+.resource_draggable[type*=EC2\:\:Instance] > div,
+.resource_draggable[type*=Server] > div {
+    background-image: url(/static/img/hotui/icon-servers.svg);
+}
+
+.resource_draggable[type*=Network] > div {
+    background-image: url(/static/img/hotui/icon-networks.svg);
+}
+
+.resource_draggable[type*=DNS] > div {
+    background-image: url(/static/img/hotui/icon-dns.svg);
+}
+
+.resource_draggable[type*=Key] > div {
+    background-image: url(/static/img/hotui/icon-private-cloud.svg);
+}
+
+.resource_draggable[type*=Trove] > div,
+.resource_draggable[type*=Container] > div,
+.resource_draggable[type*=Volume] > div {
+    background-image: url(/static/img/hotui/icon-block-storage.svg);
+}
+
+.resource_draggable[type*=LoadBalancer] > div {
+    background-image: url(/static/img/hotui/icon-load-balancers.svg);
+}
+
+.resource_draggable[type*=AutoScale] > div {
+    background-image: url(/static/img/hotui/icon-auto-scale.svg);
+}
+
+.resource_hidden {
+    opacity: 0;
+}
