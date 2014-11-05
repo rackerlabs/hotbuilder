@@ -16,9 +16,6 @@
 
 {% extends 'hotui/hotui_base.html' %}
 
-{% load humanize %}
-{% load heat %}
-
 {% block page %}
 
 <div id="hotui_app">
@@ -36,17 +33,23 @@
         </div>
         <div id="hotui_side_panel">
             <div class="background well"></div>
-            <div id="hotui_side_panel_content"></div>
+            <div id="hotui_side_panel_content">
+                Loading resources... <img src='/static/img/loading.gif'>
+            </div>
             <div class="close_button">x</div>
         </div>
         <div class="load_from_url">Load From URL</div>
         <div class="get_json">Get Template</div>
     </div>
+    <div id="hotui_beta_warning">
+        <p>THIS IS EXPERIMENTAL BETA FUNCTIONALITY. NOT GUARANTEED TO WORK.</p>
+    </div>
 </div>
 
 <script>
     var STACK_ENDPOINT = '{{ stack_endpoint|safe }}',
-        STACK_REGION = '{{ region_value|safe }}';
+        STACK_REGION = '{{ region_value|safe }}',
+        HOTUI_RESOURCE_NAMES = {{ resource_names|safe }};
 </script>
 <script src='{{ STATIC_URL }}js/hotui/util.js' type='text/javascript' charset="utf-8"></script>
 <script src='{{ STATIC_URL }}js/hotui/barricade.js' type='text/javascript' charset="utf-8"></script>

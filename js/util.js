@@ -12,17 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-function IS_OBJECT(o) {
-    return o === Object(o);
-}
-
-function IS_ARRAY(a) {
-    return ({}).toString.call(a) === "[object Array]";
-}
-
-function HAVE_MATCHING_TYPES(a, b) {
-    return ({}).toString.call(a) === ({}).toString.call(b);
-}
-
 // Create HotUI 'namespace'
 HotUI = {};

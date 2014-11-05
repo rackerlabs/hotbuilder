@@ -484,6 +484,7 @@ HotUI.Topology = (function () {
 
         function updateNodesArray() {
             var nodeMap = getNodeMap(),
+                positions = getSavedPositions(),
                 droppedNode;
 
             nodes = resources.toArray().map(function (resource) {
@@ -502,6 +503,11 @@ HotUI.Topology = (function () {
                     droppedNode = newNode;
                     nextResourcePt = null;
                     return newNode;
+                } else if (positions.hasOwnProperty(resource.getID())) {
+                    return TopologyNode.create(resource, {
+                        x: positions[resource.getID()].x,
+                        y: positions[resource.getID()].y
+                    });
                 } else {
                     return TopologyNode.create(resource, {
                         x: (Math.random() - 0.5) * width,
@@ -589,6 +595,14 @@ HotUI.Topology = (function () {
                 addResourceLinks(curNode);
             });
         }
+
+        function getSavedPositions() {
+            var positions =
+                    JSON.parse(localStorage.getItem('resourcePositions')) || {};
+
+            localStorage.removeItem('resourcePositions');
+            return positions;
+        }
             
         function updateNodeData() {
             node = node.data(nodes, function (d) { return d.data.getID(); });
@@ -617,6 +631,19 @@ HotUI.Topology = (function () {
 
         //setWebLayout();
         setTieredLayout();
+
+        $(window).unload(function () {
+            var positions = {};
+            nodes.forEach(function (n) {
+                positions[n.data.getID()] = {
+                    x: n.x,
+                    y: n.y
+                };
+            });
+
+            localStorage.setItem('resourcePositions',
+                                 JSON.stringify(positions));
+        });
 
         this.SET_WEB = setWebLayout;
         this.SET_TIERED = setTieredLayout;

@@ -36,6 +36,17 @@
     width: 100%;
 }
 
+#hotui_beta_warning {
+    position: absolute;
+    left: 50%;
+}
+
+#hotui_beta_warning > p {
+    position: relative;
+    left: -50%;
+    color: red;
+}
+
 /*
  * Topology
  */

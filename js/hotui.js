@@ -14,13 +14,16 @@
 
 $(function () {
     var topology = HotUI.Topology($("#hotui_topology"));
-    var template = HotUI.HOT.Template.create();
+    var template = HotUI.HOT.Template.create(
+                       JSON.parse(localStorage.getItem('template')));
+
     var sidePanelController = HotUI.SidePanelController(
                                     $("#hotui_side_panel"),
                                     $("#hotui_side_panel_content"),
                                     $("#hotui_side_panel > .close_button"));
 
     var untitledResources = 0;
+
     var $overlay = $("#hotui_overlay");
     var $sidePanel = $("#hotui_side_panel");
     var $sidePanelContent = $("#hotui_side_panel_content");
@@ -47,6 +50,10 @@ $(function () {
     var curHovering = null;
 
     var $navUl = $("#hotui_nav > ul");
+
+    $(window).unload(function () {
+        localStorage.setItem('template', JSON.stringify(template.toJSON()));
+    });
 
     $("#hotui_nav > ul > li").on("click", function () {
         var $li = $(this);
