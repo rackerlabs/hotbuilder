@@ -62,7 +62,7 @@ createHOT = function (resourceTypeObj) {
     // later.
     //
 
-    hot.ResourcePropertyWrapper = Barricade.base.extend({
+    hot.ResourcePropertyWrapper = Barricade.Base.extend({
         create: function (json, parameters) {
             var self = this.extend({}),
                 value = hot.IntrinsicFunctionFactory(json, parameters);
@@ -71,10 +71,10 @@ createHOT = function (resourceTypeObj) {
                 parameters = {};
             }
 
-            Barricade.eventEmitter.call(self);
+            Barricade.Observable.call(self);
 
             if (parameters.hasOwnProperty('id')) {
-                Barricade.identifiable.call(self, parameters.id);
+                Barricade.Identifiable.call(self, parameters.id);
             }
 
             if (value) {
@@ -134,15 +134,8 @@ createHOT = function (resourceTypeObj) {
         hasDependency: function () {
             return this._value.hasDependency();
         },
-        getDeferred: function () {
-            return this._value.getDeferred();
-        },
-        getAllDeferred: function () {
-            if ('getAllDeferred' in this._value) {
-                return this._value.getAllDeferred();
-            } else {
-                return [];
-            }
+        resolveWith: function (obj) {
+            return this.getValue().resolveWith(obj);
         },
         isEmpty: function () {
             return !!this._value;
@@ -163,7 +156,7 @@ createHOT = function (resourceTypeObj) {
                         return [value].concat(value.getIntrinsicFunctions());
                     }
                     return [value];
-                } else if (value.instanceof(Barricade.container)) {
+                } else if (value.instanceof(Barricade.Container)) {
                     value.each(function (i, element) {
                         intrinsics = intrinsics.concat(searchValue(element));
                     });
@@ -312,7 +305,7 @@ createHOT = function (resourceTypeObj) {
                 getConstraints(this.get('constraints').get());
 
             classOut = hot.ResourcePropertyWrapper.extend({
-                _innerClass: Barricade(schema),
+                _innerClass: Barricade.create(schema),
                 _description: this.get('description')
             }, wrapperSchema);
 
@@ -322,7 +315,7 @@ createHOT = function (resourceTypeObj) {
         return propertyOut;
     };
 
-    hot.ResourceProperty = Barricade.immutableObject.extend({}, {
+    hot.ResourceProperty = Barricade.ImmutableObject.extend({}, {
         '@type': Object,
         'type': {'@type': String},
         'description': {'@type': String},
@@ -364,12 +357,12 @@ createHOT = function (resourceTypeObj) {
     hot.ResourceProperty_boolean = hot.ResourceProperty.extend({}, {
         'default': {'@type': Boolean}});
 
-    hot.ResourceAttribute = Barricade({
+    hot.ResourceAttribute = Barricade.create({
             '@type': Object,
             'description': {'@type': String}
     });
 
-    hot.ResourceType = Barricade({
+    hot.ResourceType = Barricade.create({
         '@type': Object,
 
         'attributes': {
@@ -386,7 +379,7 @@ createHOT = function (resourceTypeObj) {
         }
     });
 
-    hot.ResourceTypes = Barricade({
+    hot.ResourceTypes = Barricade.create({
         '@type': Object,
         '?': {'@class': hot.ResourceType}
     });
@@ -423,7 +416,7 @@ createHOT = function (resourceTypeObj) {
         return false;
     };
 
-    hot.IntrinsicFunction = Barricade.immutableObject.extend({}, {
+    hot.IntrinsicFunction = Barricade.ImmutableObject.extend({}, {
         '@type': Object,
         '@required': false
     });
@@ -542,7 +535,7 @@ createHOT = function (resourceTypeObj) {
                 '@type': Object,
                 '?': {
                     '@class': hot.ResourcePropertyWrapper.extend({
-                        _innerClass: Barricade({'@type': String})
+                        _innerClass: Barricade.create({'@type': String})
                     }, {})
                 }
             }
@@ -553,7 +546,7 @@ createHOT = function (resourceTypeObj) {
         'resource_facade': {'@type': String}
     });
 
-    hot.ResourceProperties = Barricade.immutableObject.extend({});
+    hot.ResourceProperties = Barricade.ImmutableObject.extend({});
 
     hot.ResourcePropertiesFactory = function (json, parameters, type) {
         var propertyClass = hot['ResourceProperties_' + type],
@@ -647,7 +640,7 @@ createHOT = function (resourceTypeObj) {
         });
     }());
 
-    hot.Resource = Barricade.immutableObject.extend({
+    hot.Resource = Barricade.ImmutableObject.extend({
         getProperties: function () {
             return this.get('properties');
         },
@@ -682,7 +675,7 @@ createHOT = function (resourceTypeObj) {
                 var intrinsics = [];
                 if (value.instanceof(hot.ResourcePropertyWrapper)) {
                     return value.getIntrinsicFunctions();
-                } else if (value.instanceof(Barricade.container)) {
+                } else if (value.instanceof(Barricade.Container)) {
                     value.each(function (i, element) {
                         intrinsics = intrinsics.concat(getIntrinsics(element));
                     });
@@ -749,7 +742,7 @@ createHOT = function (resourceTypeObj) {
     });
 
 
-    hot.ParameterDefault = Barricade.primitive.extend({}, {
+    hot.ParameterDefault = Barricade.Primitive.extend({}, {
         '@required': false
     });
 
@@ -785,7 +778,7 @@ createHOT = function (resourceTypeObj) {
         console.error('unknown constraint type');
     };
 
-    hot.ParameterConstraint = Barricade.immutableObject.extend({}, {
+    hot.ParameterConstraint = Barricade.ImmutableObject.extend({}, {
         '@type': Object,
         'description': {
             '@type': String,
@@ -828,7 +821,7 @@ createHOT = function (resourceTypeObj) {
     hot.CustomParameterConstraint = hot.ParameterConstraint.extend({}, {
         'custom_constraint': {'@type': String}});
 
-    hot.Parameter = Barricade({
+    hot.Parameter = Barricade.create({
         '@type': Object,
 
         'type': {'@type': String},
@@ -880,7 +873,7 @@ createHOT = function (resourceTypeObj) {
         }
     });
 
-    hot.ParameterGroup = Barricade({
+    hot.ParameterGroup = Barricade.create({
         '@type': Object,
 
         'label': {'@type': String},
@@ -901,17 +894,17 @@ createHOT = function (resourceTypeObj) {
         },
     });
 
-    hot.Output = Barricade({
+    hot.Output = Barricade.create({
         '@type': Object,
         'description': {'@type': String},
         'value': {
             '@class': hot.ResourcePropertyWrapper.extend({
-                _innerClass: Barricade({'@type': String})
+                _innerClass: Barricade.create({'@type': String})
             }, {})
         }
     });
 
-    hot.Template = Barricade({
+    hot.Template = Barricade.create({
         '@type': Object,
 
         'heat_template_version': {'@type': String},
@@ -944,14 +937,14 @@ createHOT = function (resourceTypeObj) {
         var elementSchema,
             primitiveExtension = {
                 create: function (json, parameters) {
-                    var self = Barricade.primitive.create.call(this, json,
+                    var self = Barricade.Primitive.create.call(this, json,
                                                                parameters);
                     hot.Primitive.call(self);
                     return self;
                 }
             };
 
-        hot.Primitive = Barricade.blueprint.create(function () {});
+        hot.Primitive = Barricade.Blueprint.create(function () {});
 
         hot.Primitive._schema = {}; // QUICK HACK
 
@@ -965,7 +958,7 @@ createHOT = function (resourceTypeObj) {
             } else if (type === Number) {
                 return hot.Primitive.number.create(json, parameters);
             } else if (type === Array) {
-                return hot.Primitive.array.create(json, parameters);
+                return hot.Primitive.Array.create(json, parameters);
             } else if (type === Object) {
                 return hot.Primitive.object.create(json, parameters);
             }
@@ -976,15 +969,15 @@ createHOT = function (resourceTypeObj) {
             '@factory': hot.Primitive.Factory
         };
         
-        hot.Primitive.string = Barricade.primitive.extend(primitiveExtension,
+        hot.Primitive.string = Barricade.Primitive.extend(primitiveExtension,
                                                           {'@type': String});
-        hot.Primitive.bool = Barricade.primitive.extend(primitiveExtension,
+        hot.Primitive.bool = Barricade.Primitive.extend(primitiveExtension,
                                                         {'@type': Boolean});
-        hot.Primitive.number = Barricade.primitive.extend(primitiveExtension,
+        hot.Primitive.number = Barricade.Primitive.extend(primitiveExtension,
                                                           {'@type': Number});
-        hot.Primitive.array = Barricade.array.extend({
+        hot.Primitive.Array = Barricade.Array.extend({
             create: function (json, parameters) {
-                var self = Barricade.array.create.call(this, json, parameters);
+                var self = Barricade.Array.create.call(this, json, parameters);
                 hot.Primitive.call(self);
                 return self;
             }
@@ -993,9 +986,9 @@ createHOT = function (resourceTypeObj) {
             '*': elementSchema
         });
 
-        hot.Primitive.object = Barricade.mutableObject.extend({
+        hot.Primitive.object = Barricade.MutableObject.extend({
             create: function (json, parameters) {
-                var self = Barricade.mutableObject
+                var self = Barricade.MutableObject
                                     .create.call(this, json, parameters);
                 hot.Primitive.call(self);
                 return self;

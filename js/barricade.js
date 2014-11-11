@@ -15,9 +15,7 @@
 Barricade = (function () {
     "use strict";
 
-    var barricade = {};
-
-    var blueprint = {
+    var Blueprint = {
             create: function (f) {
                 var g = function () {
                         if (this.hasOwnProperty('_parents')) {
@@ -28,179 +26,14 @@ Barricade = (function () {
                             });
                         }
 
-                        f.apply(this, arguments);
+                        return f.apply(this, arguments);
                     };
 
                 return g;
             }
     };
 
-    barricade.identifiable = blueprint.create(function (id) {
-        this.getID = function () {
-            return id;
-        };
-
-        this.setID = function (newID) {
-            id = newID;
-            this.emit('change', 'id');
-        };
-    });
-
-    barricade.omittable = blueprint.create(function (isUsed) {
-        this.isUsed = function () {
-            // If required, it has to be used.
-            return this.isRequired() || isUsed;
-        };
-
-        this.setIsUsed = function (newUsedValue) {
-            isUsed = !!newUsedValue;
-        };
-
-        this.on('change', function () {
-            isUsed = !this.isEmpty();
-        });
-    });
-
-    barricade.deferrable = blueprint.create(function (schema) {
-        var self = this,
-            deferred;
-
-        function resolver(neededValue) {
-            var ref = schema['@ref'].resolver(self, neededValue);
-            if (ref === undefined) {
-                logError('Could not resolve "' + 
-                          JSON.stringify(self.toJSON()) + '"');
-            }
-            return ref;
-        }
-
-        function hasDependency() {
-            return schema.hasOwnProperty('@ref');
-        }
-
-        this.hasDependency = hasDependency;
-
-        if (hasDependency()) {
-            this.getDeferred = function () {
-                return deferred;
-            };
-
-            deferred = barricade.deferred.create(schema['@ref'].needs,
-                                                 resolver);
-        }
-    });
-
-    barricade.validatable = blueprint.create(function (schema) {
-        var constraints = schema['@constraints'],
-            error = null;
-
-        if (barricade.getType(constraints) !== Array) {
-            constraints = [];
-        }
-
-        this.hasError = function () { return error !== null; };
-        this.getError = function () { return error || ''; };
-
-        this._validate = function (value) {
-            function getConstraintMessage(i, lastMessage) {
-                if (lastMessage !== true) {
-                    return lastMessage;
-                } else if (i < constraints.length) {
-                    return getConstraintMessage(i + 1, constraints[i](value));
-                }
-                return null;
-            }
-            error = getConstraintMessage(0, true);
-            return !this.hasError();
-        };
-    });
-
-    var eventEmitter = blueprint.create(function () {
-        var events = {};
-
-        function hasEvent(eventName) {
-            return events.hasOwnProperty(eventName);
-        }
-
-        // Adds listener for event
-        this.on = function (eventName, callback) {
-            if (!hasEvent(eventName)) {
-                events[eventName] = [];
-            }
-
-            events[eventName].push(callback);
-        };
-
-        // Removes listener for event
-        this.off = function (eventName, callback) {
-            var index;
-
-            if (hasEvent(eventName)) {
-                index = events[eventName].indexOf(callback);
-
-                if (index > -1) {
-                    events[eventName].splice(index, 1);
-                }
-            }
-        };
-
-        this.emit = function (eventName) {
-            var args = arguments; // Must come from correct scope
-            if (events.hasOwnProperty(eventName)) {
-                events[eventName].forEach(function (callback) {
-                    // Call with emitter as context and pass all but eventName
-                    callback.apply(this, Array.prototype.slice.call(args, 1));
-                }, this);
-            }
-        };
-    });
-
-    barricade.deferred = {
-        create: function (classGetter, onResolve) {
-            var self = Object.create(this),
-                callbacks = [],
-                isResolved = false;
-
-            self.getClass = function () {
-                return classGetter();
-            };
-
-            self.resolve = function (obj) {
-                var ref;
-
-                if (isResolved) {
-                    throw new Error('Deferred already resolved');
-                }
-
-                ref = onResolve(obj);
-                isResolved = true;
-
-                if (ref === undefined) {
-                    logError('Could not resolve reference');
-                } else {
-                    callbacks.forEach(function (callback) {
-                        callback(ref);
-                    });
-                }
-
-                return ref;
-            };
-
-            self.isResolved = function () {
-                return isResolved;
-            };
-
-            self.addCallback = function (callback) {
-                callbacks.push(callback);
-            };
-            
-            return self;
-        }
-    };
-
-    barricade.base = (function () {
-        var base = {};
-
+    var Extendable = Blueprint.create(function () {
         function forInKeys(obj) {
             var key,
                 keys = [];
@@ -213,7 +46,7 @@ Barricade = (function () {
         }
 
         function isPlainObject(obj) {
-            return barricade.getType(obj) === Object &&
+            return getType(obj) === Object &&
                 Object.getPrototypeOf(Object.getPrototypeOf(obj)) === null;
         }
 
@@ -254,7 +87,7 @@ Barricade = (function () {
             });
         }
 
-        Object.defineProperty(base, 'extend', {
+        return Object.defineProperty(this, 'extend', {
             enumerable: false,
             writable: false,
             value: function (extension, schema) {
@@ -263,12 +96,14 @@ Barricade = (function () {
                                             deepClone(this._schema) : {};
                     merge(extension._schema, schema);
                 }
-                
+
                 return extend.call(this, extension);
             }
         });
+    });
 
-        Object.defineProperty(base, 'instanceof', {
+    var InstanceofMixin = Blueprint.create(function () {
+        return Object.defineProperty(this, 'instanceof', {
             enumerable: false,
             value: function (proto) {
                 var _instanceof = this.instanceof,
@@ -292,199 +127,344 @@ Barricade = (function () {
                 return false;
             }
         });
-        
-        return base.extend({
-            create: function (json, parameters) {
-                var self = this.extend({}),
-                    schema = self._schema,
-                    type = schema['@type'];
+    });
 
-                if (!parameters) {
-                    parameters = {};
-                }
+    var Identifiable = Blueprint.create(function (id) {
+        this.getID = function () {
+            return id;
+        };
 
-                if (schema.hasOwnProperty('@inputMassager')) {
-                    json = schema['@inputMassager'](json);
-                }
+        this.setID = function (newID) {
+            id = newID;
+            this.emit('change', 'id');
+        };
+    });
 
-                if (barricade.getType(json) !== type) {
-                    if (json) {
-                        logError("Type mismatch (json, schema)");
-                        logVal(json, schema);
-                    } else {
-                        parameters.isUsed = false;
-                    }
+    var Omittable = Blueprint.create(function (isUsed) {
+        this.isUsed = function () {
+            // If required, it has to be used.
+            return this.isRequired() || isUsed;
+        };
 
-                    // Replace bad type (does not change original)
-                    json = type();
-                }
+        this.setIsUsed = function (newUsedValue) {
+            isUsed = !!newUsedValue;
+        };
 
-                self._data = self._sift(json, parameters);
-                self._parameters = parameters;
-
-                if (schema.hasOwnProperty('@toJSON')) {
-                    self.toJSON = schema['@toJSON'];
-                }
-
-                eventEmitter.call(self);
-                barricade.omittable.call(self, parameters.isUsed !== false);
-                barricade.deferrable.call(self, schema);
-                barricade.validatable.call(self, schema);
-
-                if (parameters.hasOwnProperty('id')) {
-                    barricade.identifiable.call(self, parameters.id);
-                }
-
-                return self;
-            },
-            _sift: function () {
-                throw new Error("sift() must be overridden in subclass");
-            },
-            _safeInstanceof: function (instance, class_) {
-                return typeof instance === 'object' &&
-                    ('instanceof' in instance) &&
-                    instance.instanceof(class_);
-            },
-            getPrimitiveType: function () {
-                return this._schema['@type'];
-            },
-            isRequired: function () {
-                return this._schema['@required'] !== false;
-            },
-            isEmpty: function () {
-                throw new Error('Subclass should override isEmpty()');
-            }
+        this.on('change', function () {
+            isUsed = !this.isEmpty();
         });
-    }());
+    });
 
-    barricade.container = barricade.base.extend({
+    var Deferrable = Blueprint.create(function (schema) {
+        var self = this,
+            deferred;
+
+        function resolver(neededValue) {
+            var ref = schema['@ref'].resolver(self, neededValue);
+            if (ref === undefined) {
+                logError('Could not resolve "' + 
+                          JSON.stringify(self.toJSON()) + '"');
+            }
+            return ref;
+        }
+
+        if (schema.hasOwnProperty('@ref')) {
+            deferred = Deferred.create(schema['@ref'].needs, resolver);
+        }
+
+        this.resolveWith = function (obj) {
+            var allResolved = true;
+
+            if (deferred && !deferred.isResolved()) {
+                if (deferred.needs(obj)) {
+                    this.emit('replace', deferred.resolve(obj));
+                } else {
+                    allResolved = false;
+                }
+            }
+
+            if (this.instanceof(Container)) {
+                this.each(function (index, value) {
+                    if (!value.resolveWith(obj)) {
+                        allResolved = false;
+                    }
+                });
+            }
+
+            return allResolved;
+        };
+    });
+
+    var Validatable = Blueprint.create(function (schema) {
+        var constraints = schema['@constraints'],
+            error = null;
+
+        if (getType(constraints) !== Array) {
+            constraints = [];
+        }
+
+        this.hasError = function () { return error !== null; };
+        this.getError = function () { return error || ''; };
+
+        this._validate = function (value) {
+            function getConstraintMessage(i, lastMessage) {
+                if (lastMessage !== true) {
+                    return lastMessage;
+                } else if (i < constraints.length) {
+                    return getConstraintMessage(i + 1, constraints[i](value));
+                }
+                return null;
+            }
+            error = getConstraintMessage(0, true);
+            return !this.hasError();
+        };
+
+        this.addConstraint = function (newConstraint) {
+            constraints.push(newConstraint);
+        };
+    });
+
+    var Enumerated = Blueprint.create(function(enum_) {
+        var self = this;
+
+        function getEnum() {
+            return (typeof enum_ === 'function') ? enum_.call(self) : enum_;
+        }
+
+        this.getEnumLabels = function () {
+            var curEnum = getEnum();
+            if (getType(curEnum[0]) === Object) {
+                return curEnum.map(function (value) { return value.label; });
+            } else {
+                return curEnum;
+            }
+        };
+
+        this.getEnumValues = function () {
+            var curEnum = getEnum();
+            if (getType(curEnum[0]) === Object) {
+                return curEnum.map(function (value) { return value.value; });
+            } else {
+                return curEnum;
+            }
+        };
+
+        this.addConstraint(function (value) {
+            return (self.getEnumValues().indexOf(value) > -1) ||
+                'Value can only be one of ' + self.getEnumLabels().join(', ');
+        });
+    });
+
+    var Observable = Blueprint.create(function () {
+        var events = {};
+
+        function hasEvent(eventName) {
+            return events.hasOwnProperty(eventName);
+        }
+
+        // Adds listener for event
+        this.on = function (eventName, callback) {
+            if (!hasEvent(eventName)) {
+                events[eventName] = [];
+            }
+
+            events[eventName].push(callback);
+        };
+
+        // Removes listener for event
+        this.off = function (eventName, callback) {
+            var index;
+
+            if (hasEvent(eventName)) {
+                index = events[eventName].indexOf(callback);
+
+                if (index > -1) {
+                    events[eventName].splice(index, 1);
+                }
+            }
+        };
+
+        this.emit = function (eventName) {
+            var args = arguments; // Must come from correct scope
+            if (events.hasOwnProperty(eventName)) {
+                events[eventName].forEach(function (callback) {
+                    // Call with emitter as context and pass all but eventName
+                    callback.apply(this, Array.prototype.slice.call(args, 1));
+                }, this);
+            }
+        };
+    });
+
+    var Deferred = {
+        create: function (classGetter, onResolve) {
+            var self = Object.create(this);
+            self._isResolved = false;
+            self._classGetter = classGetter;
+            self._onResolve = onResolve;
+            return self;
+        },
+        resolve: function (obj) {
+            var ref;
+
+            if (this._isResolved) {
+                throw new Error('Deferred already resolved');
+            }
+
+            ref = this._onResolve(obj);
+
+            if (ref !== undefined) {
+                this._isResolved = true;
+                return ref;
+            }
+        },
+        isResolved: function () {
+            return this._isResolved;
+        },
+        needs: function (obj) {
+            return obj.instanceof(this._classGetter());
+        }
+    };
+
+    var Base = Extendable.call(InstanceofMixin.call({
         create: function (json, parameters) {
-            var self = barricade.base.create.call(this, json, parameters),
+            var self = this.extend({}),
+                schema = self._schema,
+                type = schema['@type'],
+                isUsed;
+
+            self._parameters = parameters = parameters || {};
+
+            if (schema.hasOwnProperty('@inputMassager')) {
+                json = schema['@inputMassager'](json);
+            }
+
+            isUsed = self._setData(json);
+
+            if (schema.hasOwnProperty('@toJSON')) {
+                self.toJSON = schema['@toJSON'];
+            }
+
+            Observable.call(self);
+            Omittable.call(self, isUsed);
+            Deferrable.call(self, schema);
+            Validatable.call(self, schema);
+
+            if (schema.hasOwnProperty('@enum')) {
+                Enumerated.call(self, schema['@enum']);
+            }
+
+            if (parameters.hasOwnProperty('id')) {
+                Identifiable.call(self, parameters.id);
+            }
+
+            return self;
+        },
+        _setData: function(json) {
+            var isUsed = true,
+                type = this._schema['@type'];
+
+            if (getType(json) !== type) {
+                if (json) {
+                    logError("Type mismatch (json, schema)");
+                    logVal(json, this._schema);
+                } else {
+                    isUsed = false;
+                }
+                // Replace bad type (does not change original)
+                json = this._getDefaultValue();
+            }
+            this._data = this._sift(json, this._parameters);
+
+            return isUsed;
+        },
+        _getDefaultValue: function () {
+            return this._schema.hasOwnProperty('@default')
+                ? typeof this._schema['@default'] === 'function'
+                    ? this._schema['@default']()
+                    : this._schema['@default']
+                : this._schema['@type']();
+        },
+        _sift: function () {
+            throw new Error("sift() must be overridden in subclass");
+        },
+        _safeInstanceof: function (instance, class_) {
+            return typeof instance === 'object' &&
+                ('instanceof' in instance) &&
+                instance.instanceof(class_);
+        },
+        getPrimitiveType: function () {
+            return this._schema['@type'];
+        },
+        isRequired: function () {
+            return this._schema['@required'] !== false;
+        },
+        isEmpty: function () {
+            throw new Error('Subclass should override isEmpty()');
+        }
+    }));
+
+    var Container = Base.extend({
+        create: function (json, parameters) {
+            var self = Base.create.call(this, json, parameters),
                 allDeferred = [];
 
             function attachListeners(key) {
                 self._attachListeners(key);
             }
 
-            function getOnResolve(key) {
-                return function (resolvedValue) {
-                    self.set(key, resolvedValue);
-                
-                    if (resolvedValue.hasDependency()) {
-                        allDeferred.push(resolvedValue.getDeferred());
-                    }
+            self.on('_addedElement', function (key) {
+                attachListeners(key);
+                self._tryResolveOn(self.get(key));
+            });
 
-                    if ('getAllDeferred' in resolvedValue) {
-                        allDeferred = allDeferred.concat(
-                            resolvedValue.getAllDeferred());
-                    }
-                };
-            }
-
-            function attachDeferredCallback(key, value) {
-                if (value.hasDependency()) {
-                    value.getDeferred().addCallback(getOnResolve(key));
-                }
-            }
-
-            function deferredClassMatches(deferred) {
-                return self.instanceof(deferred.getClass());
-            }
-
-            function addDeferredToList(obj) {
-                if (obj.hasDependency()) {
-                    allDeferred.push(obj.getDeferred());
-                }
-
-                if ('getAllDeferred' in obj) {
-                    allDeferred = allDeferred.concat(
-                                       obj.getAllDeferred());
-                }
-            }
-
-            function resolveDeferreds() {
-                var curDeferred,
-                    unresolvedDeferreds = [];
-
-                // New deferreds can be added to allDeferred as others are
-                // resolved. Iterating this way is safe regardless of how 
-                // new elements are added.
-                while (allDeferred.length > 0) {
-                    curDeferred = allDeferred.shift();
-
-                    if (!curDeferred.isResolved()) {
-                        if (deferredClassMatches(curDeferred)) {
-                            curDeferred.addCallback(addDeferredToList);
-                            curDeferred.resolve(self);
-                        } else {
-                            unresolvedDeferreds.push(curDeferred);
-                        }
-                    }
-                }
-
-                allDeferred = unresolvedDeferreds;
-            }
-
-            self.on('_addedElement', attachListeners);
             self.each(attachListeners);
 
-            self.each(function (key, value) {
-                attachDeferredCallback(key, value);
+            self.each(function (index, value) {
+                value.resolveWith(self);
             });
-
-            if (self.hasDependency()) {
-                allDeferred.push(self.getDeferred());
-            }
-
-            self.each(function (key, value) {
-                addDeferredToList(value);
-            });
-
-            resolveDeferreds.call(self);
-
-            self.getAllDeferred = function () {
-                return allDeferred;
-            };
 
             return self;
         },
+        _tryResolveOn: function (value) {
+            if (!value.resolveWith(this)) {
+                this.emit('_resolveUp', value);
+            }
+        },
         _attachListeners: function (key) {
             var self = this,
-                element = this.get(key);
+                element = this.get(key),
+                events = {
+                    'childChange': function (child) {
+                        self.emit('childChange', child);
+                    },
+                    'change': function () {
+                        // 'this' is set to callee, no typo
+                        events.childChange(this);
+                    },
+                    'replace': function (newValue) {
+                        self.set(key, newValue);
+                        self._tryResolveOn(newValue);
+                    },
+                    '_resolveUp': function (value) {
+                        self._tryResolveOn(value);
+                    },
+                    'removeFrom': function (container) {
+                        if (container === self) {
+                            Object.keys(events).forEach(function (eName) {
+                                element.on(eName, events[eName]);
+                            });
+                        }
+                    }
+                };
 
-            function onChildChange(child) {
-                self.emit('childChange', child);
-            }
-
-            function onDirectChildChange() {
-                onChildChange(this); // 'this' is set to callee, not typo
-            }
-
-            function onReplace(newValue) {
-                self.set(key, newValue);
-            }
-
-            element.on('childChange', onChildChange);
-            element.on('change', onDirectChildChange);
-            element.on('replace', onReplace);
-
-            element.on('removeFrom', function (container) {
-                if (container === self) {
-                    element.off('childChange', onChildChange);
-                    element.off('change', onDirectChildChange);
-                    element.off('replace', onReplace);
-                }
+            Object.keys(events).forEach(function (eName) {
+                element.on(eName, events[eName]);
             });
-        },
-        set: function (key, value) {
-            this.get(key).emit('removeFrom', this);
-            this._doSet(key, value);
-            this._attachListeners(key);
         },
         _getKeyClass: function (key) {
             return this._schema[key].hasOwnProperty('@class')
                 ? this._schema[key]['@class']
-                : barricade.poly(this._schema[key]);
+                : BarricadeMain.create(this._schema[key]);
         },
         _keyClassCreate: function (key, keyClass, json, parameters) {
             return this._schema[key].hasOwnProperty('@factory')
@@ -507,10 +487,15 @@ Barricade = (function () {
 
             return this._safeInstanceof(instance, class_) ||
                 (class_._schema.hasOwnProperty('@ref') && isRefTo());
+        },
+        set: function (key, value) {
+            this.get(key).emit('removeFrom', this);
+            this._doSet(key, value);
+            this._attachListeners(key);
         }
     });
 
-    barricade.arraylike = barricade.container.extend({
+    var Arraylike = Container.extend({
         create: function (json, parameters) {
             if (!this.hasOwnProperty('_elementClass')) {
                 Object.defineProperty(this, '_elementClass', {
@@ -520,7 +505,7 @@ Barricade = (function () {
                 });
             }
 
-            return barricade.container.create.call(this, json, parameters);
+            return Container.create.call(this, json, parameters);
         },
         _elSymbol: '*',
         _sift: function (json, parameters) {
@@ -589,9 +574,9 @@ Barricade = (function () {
         }
     });
 
-    barricade.array = barricade.arraylike.extend({});
+    var Array_ = Arraylike.extend({});
 
-    barricade.immutableObject = barricade.container.extend({
+    var ImmutableObject = Container.extend({
         create: function (json, parameters) {
             var self = this;
             if (!this.hasOwnProperty('_keyClasses')) {
@@ -605,7 +590,7 @@ Barricade = (function () {
                 });
             }
 
-            return barricade.container.create.call(this, json, parameters);
+            return Container.create.call(this, json, parameters);
         },
         _sift: function (json, parameters) {
             var self = this;
@@ -668,7 +653,7 @@ Barricade = (function () {
         }
     });
 
-    barricade.mutableObject = barricade.arraylike.extend({
+    var MutableObject = Arraylike.extend({
         _elSymbol: '?',
         _sift: function (json, parameters) {
             return Object.keys(json).map(function (key) {
@@ -682,11 +667,11 @@ Barricade = (function () {
                 return value.getID();
             });
         },
+        getPosByID: function (id) {
+            return this.getIDs().indexOf(id);
+        },
         getByID: function (id) {
-            var pos = this.toArray().map(function (value) {
-                    return value.getID();
-                }).indexOf(id);
-            return this.get(pos);
+            return this.get(this.getPosByID(id));
         },
         contains: function (element) {
             return this.toArray().some(function (value) {
@@ -706,17 +691,18 @@ Barricade = (function () {
             }, {});
         },
         push: function (newJson, newParameters) {
-            if (barricade.getType(newParameters) !== Object ||
-                    !newParameters.hasOwnProperty('id')) {
+            if (!this._safeInstanceof(newJson, this._elementClass) &&
+                    (getType(newParameters) !== Object ||
+                    !newParameters.hasOwnProperty('id'))) {
                 logError('ID should be passed in ' + 
                           'with parameters object');
             } else {
-                barricade.array.push.call(this, newJson, newParameters);
+                Array_.push.call(this, newJson, newParameters);
             }
         },
     });
 
-    barricade.primitive = barricade.base.extend({
+    var Primitive = Base.extend({
         _sift: function (json, parameters) {
             return json;
         },
@@ -727,7 +713,7 @@ Barricade = (function () {
             var schema = this._schema;
 
             function typeMatches(newVal) {
-                return barricade.getType(newVal) === schema['@type'];
+                return getType(newVal) === schema['@type'];
             }
 
             if (typeMatches(newVal) && this._validate(newVal)) {
@@ -756,7 +742,7 @@ Barricade = (function () {
         }
     });
 
-    barricade.getType = (function () {
+    var getType = (function () {
         var toString = Object.prototype.toString,
             types = {
                 'boolean': Boolean,
@@ -775,14 +761,6 @@ Barricade = (function () {
         };
     }());
 
-    function logMsg(msg) {
-        console.log("Barricade: " + msg);
-    }
-
-    function logWarning(msg) {
-        console.warn("Barricade: " + msg);
-    }
-
     function logError(msg) {
         console.error("Barricade: " + msg);
     }
@@ -795,7 +773,9 @@ Barricade = (function () {
         }
     }
 
-    function BarricadeMain(schema) {
+    var BarricadeMain = {};
+
+    BarricadeMain.create = function (schema) {
         function schemaIsMutable() {
             return schema.hasOwnProperty('?');
         }
@@ -807,32 +787,31 @@ Barricade = (function () {
         }
 
         if (schema['@type'] === Object && schemaIsImmutable()) {
-            return barricade.immutableObject.extend({_schema: schema});
+            return ImmutableObject.extend({_schema: schema});
         } else if (schema['@type'] === Object && schemaIsMutable()) {
-            return barricade.mutableObject.extend({_schema: schema});
+            return MutableObject.extend({_schema: schema});
         } else if (schema['@type'] === Array && schema.hasOwnProperty('*')) {
-            return barricade.array.extend({_schema: schema});
+            return Array_.extend({_schema: schema});
         } else {
-            return barricade.primitive.extend({_schema: schema});
+            return Primitive.extend({_schema: schema});
         }
-    }
+    };
 
-    barricade.poly = BarricadeMain;
+    BarricadeMain.getType = getType; // Very helpful function
 
-    BarricadeMain.getType = barricade.getType; // Very helpful function
-
-    BarricadeMain.base = barricade.base;
-    BarricadeMain.container = barricade.container;
-    BarricadeMain.array = barricade.array;
-    BarricadeMain.object = barricade.object;
-    BarricadeMain.immutableObject = barricade.immutableObject;
-    BarricadeMain.mutableObject = barricade.mutableObject;
-    BarricadeMain.primitive = barricade.primitive;
-    BarricadeMain.blueprint = blueprint;
-    BarricadeMain.eventEmitter = eventEmitter;
-    BarricadeMain.deferrable = barricade.deferrable;
-    BarricadeMain.omittable = barricade.omittable;
-    BarricadeMain.identifiable = barricade.identifiable;
+    BarricadeMain.Base = Base;
+    BarricadeMain.Container = Container;
+    BarricadeMain.Array = Array_;
+    BarricadeMain.Arraylike = Arraylike;
+    BarricadeMain.ImmutableObject = ImmutableObject;
+    BarricadeMain.MutableObject = MutableObject;
+    BarricadeMain.Primitive = Primitive;
+    BarricadeMain.Blueprint = Blueprint;
+    BarricadeMain.Observable = Observable;
+    BarricadeMain.Deferrable = Deferrable;
+    BarricadeMain.Omittable = Omittable;
+    BarricadeMain.Identifiable = Identifiable;
+    BarricadeMain.Enumerated = Enumerated;
 
     return BarricadeMain;
 

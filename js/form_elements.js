@@ -86,14 +86,14 @@ $(function () {
             parameters.template = null;
         }
 
-        if (data.instanceof(Barricade.container)) {
-            if (data.instanceof(Barricade.array)) {
+        if (data.instanceof(Barricade.Container)) {
+            if (data.instanceof(Barricade.Array)) {
                 return HotUI.ArrayControl.create(data, parameters);
 
-            } else if (data.instanceof(Barricade.mutableObject)) {
+            } else if (data.instanceof(Barricade.MutableObject)) {
                 return HotUI.MutableObjectControl.create(data, parameters);
 
-            } else if (data.instanceof(Barricade.immutableObject)) {
+            } else if (data.instanceof(Barricade.ImmutableObject)) {
                 return HotUI.ImmutableObjectControl.create(data, parameters);
             }
         } else {
@@ -390,7 +390,7 @@ $(function () {
         }
     });
 
-    HotUI.ContainerElementControl = Barricade.blueprint.create(
+    HotUI.ContainerElementControl = Barricade.Blueprint.create(
         function (data, label, _parent, startCollapsed) {
             var self = this,
                 oldDoHTML = this._doHTML,
@@ -473,8 +473,8 @@ $(function () {
 
                 $title.append(getFunctionButton());
 
-                if (_parent.instanceof(Barricade.mutableObject) ||
-                        _parent.instanceof(Barricade.array)) {
+                if (_parent.instanceof(Barricade.MutableObject) ||
+                        _parent.instanceof(Barricade.Array)) {
                     $title.append('<div class="delete_button" ' +
                                   'data-bind="click: deleteSelf">X</div>');
                 }
