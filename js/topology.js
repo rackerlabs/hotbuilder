@@ -559,9 +559,11 @@ HotUI.Topology = (function () {
 
             function addDependsOnLinks(nodeIn) {
                 nodeIn.data.get('depends_on').each(function (i, resourceID) {
-                    addLink(nodeIn, 
-                             resources.getByID(resourceID.get()),
-                             "depends_on");
+                    var target = resources.getByID(resourceID.get());
+
+                    if (target) {
+                        addLink(nodeIn, target, "depends_on");
+                    }
                 });
             }
 
