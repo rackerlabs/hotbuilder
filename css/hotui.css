@@ -326,6 +326,29 @@
     display: none;
 }
 
+.ResourcePropertyWrapperSelector .property_list {
+    margin-left: 10px;
+}
+
+.ResourcePropertyWrapperSelector .property_list > p:hover {
+    background-color: rgba(0, 0, 255, 0.05);
+    cursor: pointer;
+}
+
+.ResourcePropertyWrapperSelector .property_list > p.disabled {
+    color: grey;
+}
+
+.ResourcePropertyWrapperSelector .property_list > p.selected {
+    background-color: rgba(0, 0, 255, 0.1);
+}
+
+.create_dependency_button {
+    background-color: green;
+    height: 30px;
+    width: 100px;
+}
+
 .use_function_button {
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 7px;

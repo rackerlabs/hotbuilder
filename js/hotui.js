@@ -181,6 +181,9 @@ $(function () {
     // initialization
     topology.setData(template.get('resources'));
     topology.setOnResourceClick(onResourceClick);
+    topology.setOnLinkCreatorCreate(function (source, target) {
+        sidePanelController.showLinkCreatePanel(source, target);
+    });
 
     var $jsonButton = $("#hotui_overlay > .get_json");
 
