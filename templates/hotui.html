@@ -14,7 +14,7 @@
     limitations under the License.
 -->
 
-{% extends 'hotui/hotui_base.html' %}
+{% extends 'hotui_base.html' %}
 
 {% block page %}
 
@@ -51,12 +51,14 @@
         STACK_REGION = '{{ region_value|safe }}',
         HOTUI_RESOURCE_NAMES = {{ resource_names|safe }};
 </script>
-<script src='{{ STATIC_URL }}js/hotui/util.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/barricade.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/hot.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/form_elements.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/topology.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/side_panel_controller.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/hotui.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/util.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/barricade.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/hot.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/form_elements.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/topology.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/side_panel_controller.js' type='text/javascript' charset="utf-8"></script>
+<script src='{{ STATIC_URL }}hotui/js/hotui.js' type='text/javascript' charset="utf-8"></script>
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/knockout/3.1.0/knockout-min.js" charset="utf-8"></script>
 
 {% endblock %}

@@ -14,13 +14,15 @@
     limitations under the License.
 -->
 
-{% extends base_template %}
+{% extends "base.html" %}
 
-{% load humanize %}
-{% load heat %}
-
-{% block header %}
+{% block css %}
+    {% include "_stylesheets.html" %}
+    <link rel="stylesheet" href="{{ STATIC_URL }}hotui/css/hotui.css"> 
+    <link rel="stylesheet" href="{{ STATIC_URL }}hotui/css/horizon_shim.css"> 
 {% endblock %}
 
-{% block page %}
+{% block main %}
+    {% block page %}
+    {% endblock %}
 {% endblock %}

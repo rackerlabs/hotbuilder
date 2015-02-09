@@ -14,7 +14,7 @@
 
 HotUI.Topology = (function () {
     var TopologyNode = {},
-        imgsURL = '/static/img/hotui/';
+        imgsURL = '/static/hotui/img/';
 
     function TO_DEG(angle) {
         return angle * (180 / Math.PI);

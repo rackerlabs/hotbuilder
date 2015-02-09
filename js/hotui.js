@@ -190,7 +190,7 @@ $(function () {
     $jsonButton.click(function () {
         $.ajax({
             type:'POST',
-            url:'/api/json_to_yaml/',
+            url:'/project/heat/api/json_to_yaml/',
             data: {
                 'json': JSON.stringify(template.toJSON(true))
             },
@@ -222,7 +222,7 @@ $(function () {
 
                     $.ajax({
                         type:'POST',
-                        url:'/api/template_validate/',
+                        url:'/project/heat/api/template_validate/',
                         data: {
                             'endpoint': STACK_ENDPOINT,
                             'template': JSON.stringify(template.toJSON(true))
@@ -246,7 +246,7 @@ $(function () {
 
                     $.ajax({
                         type:'POST',
-                        url:'/api/yaml_to_json/',
+                        url:'/project/heat/api/yaml_to_json/',
                         data: {
                             'yaml': yaml
                         },
@@ -281,7 +281,7 @@ $(function () {
         $urlInput.children('.load_button').click(function () {
             $.ajax({
                 type:'GET',
-                url:'/api/url_to_json/',
+                url:'/project/heat/api/url_to_json/',
                 data: {
                     url: $urlInput.children('input').val()
                 },
