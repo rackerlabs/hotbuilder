@@ -100,7 +100,8 @@
 }
 
 #hotui_overlay > .get_json,
-#hotui_overlay > .load_from_url {
+#hotui_overlay > .load_from_url,
+#hotui_overlay > .download_template {
     background-color: red;
     cursor: pointer;
     height: 50px;
@@ -119,6 +120,10 @@
 
 #hotui_overlay > .load_from_url {
     top: 60px;
+}
+
+#hotui_overlay > .download_template {
+    top: 115px;
 }
 
 .load_from_url_input {
