@@ -12,40 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-Object.defineProperty(Object.prototype, 'extend', {
-    writable: false,
-    value: function (extension) {
-        return Object.keys(extension).reduce(function (object, property) {
-            object[property] = extension[property];
-            return object;
-        }, Object.create(this));
-    }
-});
-
-Object.defineProperty(Object.prototype, 'instanceof', {
-    value: function (proto) {
-        var _instanceof = this.instanceof,
-            subject = this;
-
-        function hasMixin(obj, mixin) {
-            return obj.hasOwnProperty('_parents') &&
-                obj._parents.some(function (_parent) {
-                    return _instanceof.call(_parent, mixin);
-                });
-        }
-
-        do {
-            if (subject === proto ||
-                    hasMixin(subject, proto)) {
-                return true;
-            }
-            subject = Object.getPrototypeOf(subject);
-        } while (subject);
-
-        return false;
-    }
-});
-
 $(function () {
     HotUI.FormControl = function (data, parameters) {
         if (typeof parameters === 'undefined') {
@@ -111,7 +77,7 @@ $(function () {
         throw new Error('no suitable control found');
     };
 
-    HotUI.BaseControl = {
+    HotUI.BaseControl = BaseObject.extend({
         create: function () {
             return this.extend({});
         },
@@ -122,7 +88,7 @@ $(function () {
             this._finishHTML();
             return $domElement;
         }
-    };
+    });
 
     HotUI.MultiControl = HotUI.BaseControl.extend({
         create: function (data, parameters) {
