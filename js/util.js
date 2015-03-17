@@ -13,4 +13,39 @@
 // limitations under the License.
 
 // Create HotUI 'namespace'
-HotUI = {};
+var HotUI = {},
+    BaseObject = Object.create(null);
+
+Object.defineProperty(BaseObject, 'extend', {
+    writable: false,
+    value: function (extension) {
+        return Object.keys(extension).reduce(function (object, property) {
+            object[property] = extension[property];
+            return object;
+        }, Object.create(this));
+    }
+});
+
+Object.defineProperty(BaseObject, 'instanceof', {
+    value: function (proto) {
+        var _instanceof = this.instanceof,
+            subject = this;
+
+        function hasMixin(obj, mixin) {
+            return Object.prototype.hasOwnProperty.call(obj, '_parents') &&
+                obj._parents.some(function (_parent) {
+                    return _instanceof.call(_parent, mixin);
+                });
+        }
+
+        do {
+            if (subject === proto ||
+                    hasMixin(subject, proto)) {
+                return true;
+            }
+            subject = Object.getPrototypeOf(subject);
+        } while (subject);
+
+        return false;
+    }
+});
