@@ -36,7 +36,7 @@ $(function () {
 
     if (neededResources.length > 0) {
         jQuery.ajax({
-            url: '/project/heat/api/resource_type_show/' + STACK_REGION + '/' +
+            url: ENDPOINTS.resourceTypeShow + STACK_REGION + '/' +
                 neededResources.join(','),
             success: function(data) {
                 Object.keys(data).forEach(function (type) {
