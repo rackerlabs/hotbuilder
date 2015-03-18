@@ -49,7 +49,7 @@ HotUI.Topology = (function () {
         return getInstance(Object.keys(types), 0);
     };
 
-    TopologyNode.Base = {
+    TopologyNode.Base = BaseObject.extend({
         create: function (resource, properties) {
             if (!properties) {
                 properties = {};
@@ -188,7 +188,7 @@ HotUI.Topology = (function () {
             this._onLinkCreatorDrop = callback;
         },
         _onLinkCreatorDrop: function () { }
-    };
+    });
 
     // Represents a main infrastructure component
     TopologyNode.Core = TopologyNode.Base.extend({
