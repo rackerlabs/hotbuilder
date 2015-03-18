@@ -408,7 +408,7 @@ $(function () {
                 isUsedDummy = ko.observable();
 
             function hasEditableTitle() {
-                return 'setID' in data;
+                return data.hasID();
             }
 
             function prettify(s) {
