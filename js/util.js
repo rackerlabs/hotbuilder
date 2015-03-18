@@ -14,7 +14,15 @@
 
 // Create HotUI 'namespace'
 var HotUI = {},
-    BaseObject = Object.create(null);
+    BaseObject = Object.create(null),
+    ENDPOINTS = {
+        templateValidate: "/api/hotui/template_validate/",
+        jsonToYAML: "/api/hotui/json_to_yaml/",
+        yamlToJSON: "/api/hotui/yaml_to_json/",
+        urlToJSON: "/api/hotui/url_to_json/",
+        downloadTemplate: "/api/hotui/download_template/",
+        resourceTypeShow: "/api/hotui/resource_type_show/",
+    };
 
 Object.defineProperty(BaseObject, 'extend', {
     writable: false,
