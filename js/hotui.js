@@ -305,4 +305,20 @@ $(function () {
 
         $loadFromURLButton.append($urlInput);
     });
+
+    var $downloadTemplateButton = $("#hotui_overlay > .download_template");
+
+    $downloadTemplateButton.click(function () {
+        var templateJSON = JSON.stringify(template.toJSON(true))
+                               .replace(/\"/g, '&quot;'),
+            csrf = $("meta[name='csrftoken']").attr('content'),
+            $form = $('<form method="POST" action="/api/download_template/">' +
+                          '<input type="hidden" name="json" ' +
+                              'value="' + templateJSON + '">' +
+                          '<input type="hidden" name="csrfmiddlewaretoken" ' +
+                              'value="' + csrf + '">');
+        $form.appendTo('body')
+             .submit()
+             .remove();
+    });
 });
