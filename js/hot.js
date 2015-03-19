@@ -72,10 +72,7 @@ createHOT = function (resourceTypeObj) {
             }
 
             Barricade.Observable.call(self);
-
-            if (parameters.hasOwnProperty('id')) {
-                Barricade.Identifiable.call(self, parameters.id);
-            }
+            Barricade.Identifiable.call(self, parameters.id);
 
             if (value) {
                 self.setValue(value);
