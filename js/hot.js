@@ -19,7 +19,7 @@ $(function () {
         neededResources = [];
 
     try {
-        resourceTypeObj = JSON.parse(localStorage.getItem('resourceTypes'))
+        resourceTypeObj = JSON.parse(localStorage.getItem('resourceTypes'));
         if (resourceTypeObj === null || typeof resourceTypeObj !== 'object' ||
                 resourceTypeObj instanceof Array) {
             resourceTypeObj = {};
@@ -999,4 +999,4 @@ createHOT = function (resourceTypeObj) {
 
     return hot;
 
-}
+};

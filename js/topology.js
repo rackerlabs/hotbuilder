@@ -87,7 +87,7 @@ HotUI.Topology = (function () {
                     $linkCreator.attr('cx', d3.event.x)
                                 .attr('cy', d3.event.y);
                     $linkCreatorLine.attr('x2', d3.event.x)
-                                    .attr('y2', d3.event.y)
+                                    .attr('y2', d3.event.y);
                 })
                 .on('dragend', function (d) {
                     var creatorX = +$linkCreator.attr('cx'),
@@ -96,7 +96,7 @@ HotUI.Topology = (function () {
                     $linkCreator.attr('cx', '7')
                                 .attr('cy', '10');
                     $linkCreatorLine.attr('x2', '0')
-                                    .attr('y2', '0')
+                                    .attr('y2', '0');
                     self._onLinkCreatorDrop(creatorX + d.x,
                                             creatorY + d.y);
                 });
@@ -466,7 +466,7 @@ HotUI.Topology = (function () {
 
         this.setOnLinkCreatorCreate = function (callback) {
             this._onLinkCreatorCreate = callback;
-        }
+        };
 
         this.setData = function (resourcesIn) {
             if (resources) {
