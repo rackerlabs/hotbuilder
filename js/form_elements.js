@@ -1018,7 +1018,8 @@ $(function () {
         },
         _doHTML: function () {
             var properties = this._resource.get('properties'),
-                $html = $('<div class="ResourcePropertyWrapperSelector"></div>');
+                $html =
+                    $('<div class="ResourcePropertyWrapperSelector"></div>');
 
             $html.delegate('p', 'click', function (e) {
                 var $target = $(e.target);
@@ -1033,7 +1034,8 @@ $(function () {
                                      .append($label);
                     if (value.instanceof(HotUI.HOT.ResourcePropertyWrapper) &&
                             value.getValue().instanceof(Barricade.Container) &&
-                            !value.getValue().instanceof(HotUI.HOT.IntrinsicFunction)) {
+                            !value.getValue()
+                                  .instanceof(HotUI.HOT.IntrinsicFunction)) {
                         appendProperties($child, value.getValue());
                     } else if (value.instanceof(Barricade.Container)) {
                         $label.addClass('disabled');

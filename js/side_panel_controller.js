@@ -149,8 +149,10 @@ HotUI.SidePanelController = (function () {
                 $destBox = HotUI.Snippet.create(
                     '<div data-bind="visible: showAttrs()"></div>',
                     {showAttrs: showAttrs}),
-                $createButton = $('<div class="create_dependency_button">Create</div>'),
-                $attribute = HotUI.ResourceAttributeSelector.create(targetResource),
+                $createButton =
+                    $('<div class="create_dependency_button">Create</div>'),
+                $attribute =
+                    HotUI.ResourceAttributeSelector.create(targetResource),
                 $value = HotUI.SchemalessContainerControl.create(value),
                 $selector = HotUI.ResourcePropertyWrapperSelector
                                  .create(sourceResource);
@@ -211,7 +213,8 @@ HotUI.SidePanelController = (function () {
                          '<br>',
                          'depends on <br>' + targetResource.getID(),
                          '<br>',
-                         $destBox.html().append($attribute.html(), $value.html()),
+                         $destBox.html().append($attribute.html(),
+                                                $value.html()),
                          '<br>',
                          $createButton);
             displayContent($html);
