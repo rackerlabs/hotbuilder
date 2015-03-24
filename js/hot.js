@@ -58,7 +58,7 @@ createHOT = function (resourceTypeObj) {
     var hot = {};
 
     //
-    // Set up ResourceTypes so that different Resource classes can be created 
+    // Set up ResourceTypes so that different Resource classes can be created
     // later.
     //
 
@@ -243,7 +243,7 @@ createHOT = function (resourceTypeObj) {
                         return types[t](constraintObj[t]);
                     }
                 }
-                
+
                 console.log('Constraint type not found: ', constraintObj);
                 return function () { return true; };
             }
@@ -294,7 +294,7 @@ createHOT = function (resourceTypeObj) {
             } else if (schema['@type'] === Array) {
                 schema['*'] = this.get('schema').get('*').getSchema();
             }
-            
+
             wrapperSchema['@required'] = this.get('required').get();
             schema['@required'] = this.get('required').get();
 
@@ -333,7 +333,7 @@ createHOT = function (resourceTypeObj) {
     });
 
     hot.ResourceProperty_list = hot.ResourceProperty.extend({}, {
-        'default': {'@type': Array}, 
+        'default': {'@type': Array},
         'schema': {
             '@type': Object,
             '*': {
@@ -395,10 +395,10 @@ createHOT = function (resourceTypeObj) {
 
             } else if (json.hasOwnProperty('get_attr')) {
                 return hot.GetAttribute.create(json, parameters);
-                
+
             } else if (json.hasOwnProperty('get_param')) {
                 return hot.GetParameter.create(json, parameters);
-                
+
             } else if (json.hasOwnProperty('get_file')) {
                 return hot.GetFile.create(json, parameters);
 
@@ -548,7 +548,7 @@ createHOT = function (resourceTypeObj) {
     hot.ResourcePropertiesFactory = function (json, parameters, type) {
         var propertyClass = hot['ResourceProperties_' + type],
             propertiesOut;
-            
+
         if (!propertyClass) {
             propertyClass = hot.ResourcePropertiesNull;
         }
@@ -591,7 +591,7 @@ createHOT = function (resourceTypeObj) {
         allResourceTypes.forEach(function (value) {
             var propertySchema = getPropertiesSchema(
                                       value.get('properties'));
-            
+
             if (value.getID() === 'OS::Heat::ResourceGroup') {
                 propertySchema.resource_def = {
                     '@type': Object,
@@ -685,6 +685,22 @@ createHOT = function (resourceTypeObj) {
         connectTo: function (resource) {
             this.getProperties().connectTo(resource);
             resource.getProperties().connectTo(this);
+        },
+        _docsBaseURL: "http://docs.rs-heat.com/raxdox/",
+        getDocsLink: function () {
+            var resourceType = this.get('type').get(),
+                nameTokens = resourceType.split('::'),
+                resourceBase;
+            if (nameTokens[0] === 'OS') {
+                resourceBase = "openstack";
+            } else if (nameTokens[0] === 'Rackspace') {
+                resourceBase = "rackspace";
+            } else {
+                console.warn("Resource type not found: %s", nameTokens[0]);
+                return this._docsBaseURL;
+            }
+            return this._docsBaseURL + resourceBase + '.html#' +
+                   resourceType;
         }
     }, {
         '@type': Object,
@@ -965,7 +981,7 @@ createHOT = function (resourceTypeObj) {
             '@class': hot.Primitive,
             '@factory': hot.Primitive.Factory
         };
-        
+
         hot.Primitive.string = Barricade.Primitive.extend(primitiveExtension,
                                                           {'@type': String});
         hot.Primitive.bool = Barricade.Primitive.extend(primitiveExtension,

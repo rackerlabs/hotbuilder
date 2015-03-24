@@ -16,7 +16,7 @@ HotUI.SidePanelController = (function () {
     function constructor($container, $content, $closeButton) {
         if (!(this instanceof HotUI.SidePanelController)) {
             return new HotUI.SidePanelController($container,
-                                                 $content, 
+                                                 $content,
                                                  $closeButton);
         }
 
@@ -42,7 +42,7 @@ HotUI.SidePanelController = (function () {
             return attributes.sort(function (attr1, attr2) {
                     return attr1.getID().localeCompare(attr2.getID());
                 }).map(function (attribute) {
-                    return '<b>' + attribute.getID() + '</b> - ' + 
+                    return '<b>' + attribute.getID() + '</b> - ' +
                            attribute.get('description').get();
                 }).join("<br>");
         }
@@ -58,9 +58,11 @@ HotUI.SidePanelController = (function () {
             var $resourceID;
             var $deleteResourceButton;
 
-            $html.append($('<h2><input class="resource_id" type="text" ' + 
-                      'value="' + resource.getID() + '"></h2>' +
-                      '<br><a class="delete_resource">Delete</a>'));
+            $html.append($('<h2><input class="resource_id" type="text" ' +
+                    'value="' + resource.getID() + '"></h2>' +
+                    '<br><a href="' + resource.getDocsLink() +
+                        '" target="_blank">Docs</a>' +
+                    '<br><a class="delete_resource">Delete</a>'));
             $html.append('<hr>');
             $html.append('Attributes:<br>' + (attributesHTML || 'None<br>'));
             $html.append('<hr>');
@@ -71,7 +73,7 @@ HotUI.SidePanelController = (function () {
             //resourceControl.attach();
 
             $resourceID = $content.find('.resource_id');
-            
+
             $resourceID.on('blur', function () {
                 resource.setID($resourceID.val());
             });
