@@ -17,7 +17,7 @@ $(function () {
     var template = HotUI.HOT.Template.create(
                        JSON.parse(localStorage.getItem('template')));
 
-    var sidePanelController = HotUI.SidePanelController(
+    var sidePanelController = HotUI.SidePanelController.create(
                                     $("#hotui_side_panel"),
                                     $("#hotui_side_panel_content"),
                                     $("#hotui_side_panel > .close_button"));

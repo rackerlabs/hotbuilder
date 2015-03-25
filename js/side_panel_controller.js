@@ -12,51 +12,54 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-HotUI.SidePanelController = (function () {
-    function constructor($container, $content, $closeButton) {
-        if (!(this instanceof HotUI.SidePanelController)) {
-            return new HotUI.SidePanelController($container,
-                                                 $content,
-                                                 $closeButton);
-        }
+    HotUI.SidePanelController = BaseObject.extend({
+        create: function ($container, $content, $closeButton) {
+            var self = this.extend({
+                    _isHidden: false,
+                    _$container: $container,
+                    _$content: $content
+                });
 
-        var isHidden = false;
+            $closeButton.on("click", function () {
+                if (!self._isHidden) {
+                    self._$container.hide();
+                    self._isHidden = true;
+                }
+            });
 
-        function displayContent(content) {
-            if (isHidden) {
-                $container.show();
-                isHidden = false;
+            return self;
+        },
+        displayContent: function (content) {
+            if (this._isHidden) {
+                this._$container.show();
+                this._isHidden = false;
             }
 
-            $content.scrollTop(0);
+            this._$content.scrollTop(0);
 
             if (typeof content === 'string') {
-                $content.html(content);
+                this._$content.html(content);
             } else {
-                $content.empty();
-                $content.append(content);
+                this._$content.empty();
+                this._$content.append(content);
             }
-        }
-
-        function getAttributesHTML(attributes) {
+        },
+        _getAttributesHTML: function (attributes) {
             return attributes.sort(function (attr1, attr2) {
                     return attr1.getID().localeCompare(attr2.getID());
                 }).map(function (attribute) {
                     return '<b>' + attribute.getID() + '</b> - ' +
                            attribute.get('description').get();
                 }).join("<br>");
-        }
-
-        this.showResource = function (resource, template) {
-            var $html = $('<div></div>');
-            var backingType = resource.get('properties').getBackingType();
-            var attributesHTML = getAttributesHTML(resource.getAttributes());
-            var resourceControl = HotUI.FormControl(resource, {
-                    'template': template
-                });
-
-            var $resourceID;
-            var $deleteResourceButton;
+        },
+        showResource: function (resource, template) {
+            var $html = $('<div></div>'),
+                backingType = resource.get('properties').getBackingType(),
+                attributesHTML = this._getAttributesHTML(resource.getAttributes()),
+                resourceControl = HotUI.FormControl(resource,
+                                                    {'template': template}),
+                $resourceID,
+                $deleteResourceButton;
 
             $html.append($('<h2><input class="resource_id" type="text" ' +
                     'value="' + resource.getID() + '"></h2>' +
@@ -68,17 +71,14 @@ HotUI.SidePanelController = (function () {
             $html.append('<hr>');
             $html.append(resourceControl.html());
 
-            displayContent($html);
+            this.displayContent($html);
 
-            //resourceControl.attach();
-
-            $resourceID = $content.find('.resource_id');
+            $resourceID = this._$content.find('.resource_id');
+            $deleteResourceButton = this._$content.find('.delete_resource');
 
             $resourceID.on('blur', function () {
                 resource.setID($resourceID.val());
             });
-
-            $deleteResourceButton = $content.find('.delete_resource');
 
             $deleteResourceButton.click(function () {
                 var i,
@@ -89,13 +89,10 @@ HotUI.SidePanelController = (function () {
                         resources.remove(i);
                     }
                 }
-                displayContent('');
+                this.displayContent('');
             });
-        };
-
-        this.displayContent = displayContent;
-
-        this.showParameters = function (parameters) {
+        },
+        showParameters: function (parameters) {
             var myControl = HotUI.FormControl(parameters),
                 myHTML = [];
 
@@ -103,41 +100,33 @@ HotUI.SidePanelController = (function () {
             myHTML.push('<br>');
             myHTML.push(myControl.html());
 
-            displayContent(myHTML);
-        };
-
-        this.showOutputs = function (outputs, template) {
-            var myControl = HotUI.FormControl(outputs, {
-                    'template': template
-                }),
+            this.displayContent(myHTML);
+        },
+        showOutputs: function (outputs, template) {
+            var myControl = HotUI.FormControl(outputs, {'template': template}),
                 myHTML = [];
 
             myHTML.push('<h2>Outputs</h2>');
             myHTML.push('<br');
             myHTML.push(myControl.html());
 
-            displayContent(myHTML);
-        };
-
-        this.showTemplateOptions = function (heatTemplateVersion,
-                                               description) {
+            this.displayContent(myHTML);
+        },
+        showTemplateOptions: function (heatTemplateVersion, description) {
             var $html = $('<div></div>'),
                 versionControl = HotUI.StringControl.create(
-                    heatTemplateVersion,
-                    'Heat Template Version'),
+                                    heatTemplateVersion, 'Heat Template Version'),
                 descriptionControl = HotUI.StringControl.create(
-                    description,
-                    'Description');
+                                        description, 'Description');
 
             $html.append('<h2>Template Options</h2>Heat Template Version:<br>',
                         versionControl.html(), '<br><br>',
                         'Description:<br>',
                         descriptionControl.html());
 
-            displayContent($html);
-        };
-
-        this.showLinkCreatePanel = function (sourceResource, targetResource) {
+            this.displayContent($html);
+        },
+        showLinkCreatePanel: function (sourceResource, targetResource) {
             var getAttribute = HotUI.HOT.GetAttribute.create(),
                 value = getAttribute.get('get_attr').get('value'),
                 $html = $('<div></div>'),
@@ -151,8 +140,7 @@ HotUI.SidePanelController = (function () {
                     {showAttrs: showAttrs}),
                 $createButton =
                     $('<div class="create_dependency_button">Create</div>'),
-                $attribute =
-                    HotUI.ResourceAttributeSelector.create(targetResource),
+                $attribute = HotUI.ResourceAttributeSelector.create(targetResource),
                 $value = HotUI.SchemalessContainerControl.create(value),
                 $selector = HotUI.ResourcePropertyWrapperSelector
                                  .create(sourceResource);
@@ -217,16 +205,6 @@ HotUI.SidePanelController = (function () {
                                                 $value.html()),
                          '<br>',
                          $createButton);
-            displayContent($html);
-        };
-
-        $closeButton.on("click", function () {
-            if (!isHidden) {
-                $container.hide();
-                isHidden = true;
-            }
-        });
-    }
-
-    return constructor;
-}());
+            this.displayContent($html);
+        }
+    });
