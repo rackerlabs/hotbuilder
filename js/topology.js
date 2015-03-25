@@ -12,15 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-HotUI.Topology = (function () {
-    var TopologyNode = {},
-        imgsURL = '/static/img/hotui/';
+    HotUI.TopologyNode = {};
 
-    function TO_DEG(angle) {
-        return angle * (180 / Math.PI);
-    }
-
-    TopologyNode.create = function (resource, properties) {
+    HotUI.TopologyNode.factory = function (resource, properties) {
         var self = this,
             type = resource.getType().toLowerCase(),
             types = {
@@ -49,7 +43,7 @@ HotUI.Topology = (function () {
         return getInstance(Object.keys(types), 0);
     };
 
-    TopologyNode.Base = BaseObject.extend({
+    HotUI.TopologyNode.Base = BaseObject.extend({
         create: function (resource, properties) {
             if (!properties) {
                 properties = {};
@@ -60,10 +54,11 @@ HotUI.Topology = (function () {
 
             return this.extend(properties);
         },
+        _iconBaseURL: '/static/img/hotui/',
         focus: {x: 0, y: 0},
         focusForce: {x: 0.5, y: 0.5},
         getIconURL: function () {
-            return imgsURL + this.iconFile;
+            return this._iconBaseURL + this.iconFile;
         },
         iconFile: 'icon-orchestration.svg',
         setNode: function ($g) {
@@ -98,7 +93,8 @@ HotUI.Topology = (function () {
                     $linkCreatorLine.attr('x2', '0')
                                     .attr('y2', '0');
                     self._onLinkCreatorDrop(creatorX + d.x,
-                                            creatorY + d.y);
+                                            creatorY + d.y,
+                                            self);
                 });
 
             $linkCreatorLine = $g.append('line')
@@ -191,141 +187,155 @@ HotUI.Topology = (function () {
     });
 
     // Represents a main infrastructure component
-    TopologyNode.Core = TopologyNode.Base.extend({
+    HotUI.TopologyNode.Core = HotUI.TopologyNode.Base.extend({
         charge: -400,
         focusForce: {x: 0.05, y: 0.35}
     });
 
-    TopologyNode.Helper = TopologyNode.Base.extend({
+    HotUI.TopologyNode.Helper = HotUI.TopologyNode.Base.extend({
         charge: -200,
         focus: {x: -300, y: 0},
         focusForce: {x: 0.05, y: 0.01}
     });
 
-    TopologyNode.DNS = TopologyNode.Core.extend({
+    HotUI.TopologyNode.DNS = HotUI.TopologyNode.Core.extend({
         focus: {x: 0, y: -140},
         iconFile: 'icon-dns.svg'
     });
 
-    TopologyNode.LoadBalancer = TopologyNode.Core.extend({
+    HotUI.TopologyNode.LoadBalancer = HotUI.TopologyNode.Core.extend({
         focus: {x: 0, y: -70},
         iconFile: 'icon-load-balancers.svg'
     });
 
-    TopologyNode.Server = TopologyNode.Core.extend({
+    HotUI.TopologyNode.Server = HotUI.TopologyNode.Core.extend({
         focus: {x: 0, y: 0},
         iconFile: 'icon-servers.svg'
     });
 
-    TopologyNode.Database = TopologyNode.Core.extend({
+    HotUI.TopologyNode.Database = HotUI.TopologyNode.Core.extend({
         focus: {x: 0, y: 70},
         iconFile: 'icon-block-storage.svg'
     });
 
-    TopologyNode.AutoScale = TopologyNode.Helper.extend({
+    HotUI.TopologyNode.AutoScale = HotUI.TopologyNode.Helper.extend({
         iconFile: 'icon-auto-scale.svg'
     });
 
-    TopologyNode.Network = TopologyNode.Helper.extend({
+    HotUI.TopologyNode.Network = HotUI.TopologyNode.Helper.extend({
         iconFile: 'icon-networks.svg'
     });
 
-    TopologyNode.Key = TopologyNode.Helper.extend({
+    HotUI.TopologyNode.Key = HotUI.TopologyNode.Helper.extend({
         iconFile: 'icon-private-cloud.svg'
     });
 
-    function constructor($container) {
-        if (!(this instanceof HotUI.Topology)) {
-            return new HotUI.Topology($container);
-        }
-        
-        var that = this;
-        var width = $container.width();
-        var height = $container.height();
+    HotUI.Topology = BaseObject.extend({
+        create: function ($container) {
+            var self = this.extend({
+                    _width: $container.width(),
+                    _height: $container.height(),
+                    _onResourceClickCallback: function () {},
+                    _nodes: []
+                }),
+                centerX = 3 * self._width / 4,
+                centerY = self._height / 2,
+                zoom = d3.behavior.zoom()
+                                  .translate([centerX, centerY])
+                                  .on("zoom", function () { self._onZoom(); });
 
-        var zoom = d3.behavior.zoom()
-                              .translate([3 * width / 4, height / 2])
-                              .on("zoom", onZoom);
+            self._svg = d3.select($container[0]).append("svg")
+                    .attr("width", self._width)
+                    .attr("height", self._height)
+                    .call(zoom);
 
-        var svg = d3.select($container[0]).append("svg")
-                .attr("width", width)
-                .attr("height", height)
-                .call(zoom);
+            self._topG = self._svg.append("g")
+                             .attr('transform', 'translate(' + centerX + ',' +
+                                                               centerY + ')');
 
-        var topG = svg.append("g")
-                       .attr('transform', 'translate(' + 3 * width / 4 + ',' +
-                                                         height / 2 + ')');
+            self._force = d3.layout.force()
+                                   .size([self._width, self._height])
+                                   .on("tick", function (e) { self._tick(e); })
+                                   .start();
 
-        var force = d3.layout.force()
-                .size([width, height])
-                .on("tick", tick)
-                .start();
+            self._node = self._topG.selectAll(".node");
+            self._link = self._topG.selectAll(".link");
+            self._updatedResourceCB = function () { self.updatedResource(); };
 
-        var onResourceClickCallback = function () {};
+            self._topG.append('circle')
+                 .attr('r', '1')
+                 .attr('fill', '#808080')
+                 .attr('cx', '0')
+                 .attr('cy', '0');
 
-        var resources;
-        var nodes = [];
-        var links;
+            self.setTieredLayout();
 
-        var node = topG.selectAll(".node");
-        var link = topG.selectAll(".link");
+            $(window).unload(function () {
+                var positions = {};
+                self._nodes.forEach(function (n) {
+                    positions[n.data.getID()] = {
+                        x: n.x,
+                        y: n.y
+                    };
+                });
 
-        var nextResourcePt;
+                localStorage.setItem('resourcePositions',
+                                     JSON.stringify(positions));
+            });
 
-        var layoutSpecificTick;
-
-        function setWebLayout() {
-            force.gravity(0.1)
+            return self;
+        },
+        setWebLayout: function () {
+            this._force.gravity(0.1)
                  .charge(-200)
                  .chargeDistance(Number.POSITIVE_INFINITY)
                  .linkDistance(70)
                  .linkStrength(1);
 
-            layoutSpecificTick = webTick;
-        }
-
-        function setTieredLayout() {
-            force.gravity(0)
+            this._layoutSpecificTick = this._webTick;
+        },
+        setTieredLayout: function () {
+            this._force.gravity(0)
                  .charge(function (d) {
                      return d.charge;
                  })
                  .linkDistance(function (d) {
-                     if (d.source.instanceof(TopologyNode.Core) &&
-                             d.target.instanceof(TopologyNode.Core)) {
+                     if (d.source.instanceof(HotUI.TopologyNode.Core) &&
+                             d.target.instanceof(HotUI.TopologyNode.Core)) {
                          return 70;
-                     } else if (d.source.instanceof(TopologyNode.Helper) &&
-                             d.target.instanceof(TopologyNode.Helper)) {
+                     } else if (d.source.instanceof(HotUI.TopologyNode.Helper) &&
+                             d.target.instanceof(HotUI.TopologyNode.Helper)) {
                          return 70;
                      } else {
                          return 200;
                      }
                  })
                  .linkStrength(function (d) {
-                     return d.source.instanceof(TopologyNode.Core) &&
-                            d.target.instanceof(TopologyNode.Core) ? 
-                                0.5 : 
-                            d.source.instanceof(TopologyNode.Helper) &&
-                            d.target.instanceof(TopologyNode.Helper) ? 
+                     return d.source.instanceof(HotUI.TopologyNode.Core) &&
+                            d.target.instanceof(HotUI.TopologyNode.Core) ?
+                                0.5 :
+                            d.source.instanceof(HotUI.TopologyNode.Helper) &&
+                            d.target.instanceof(HotUI.TopologyNode.Helper) ?
                                 0.5 :
                             0.03;
                  })
                  .chargeDistance(150);
 
-            layoutSpecificTick = tieredTick;
-        }
-
-        function decorateNodes(nodesIn) {
-            var newG = nodesIn.append("g")
+            this._layoutSpecificTick = this._tieredTick;
+        },
+        _decorateNodes: function (nodesIn) {
+            var self = this,
+                newG = nodesIn.append("g")
                     .attr("class", "node")
                     .attr("cx", function (d) { return d.x; })
                     .attr("cy", function (d) { return d.y; })
-                    .call(force.drag)
-                    .on("mousedown", function () { 
+                    .call(this._force.drag)
+                    .on("mousedown", function () {
                         d3.event.stopPropagation();
                     })
                     .on("click", function (d) {
                         if (!d3.event.defaultPrevented) {
-                            onResourceClickCallback(d.data);
+                            self._onResourceClickCallback(d.data);
                         }
                     })
                     .on("mouseenter", function () {
@@ -334,17 +344,17 @@ HotUI.Topology = (function () {
 
             newG.each(function (d) {
                 d.setNode(d3.select(this));
-                d.setOnLinkCreatorDrop(onLinkCreatorDrop);
+                d.setOnLinkCreatorDrop(function (x, y, srcNode) {
+                    self._onLinkCreatorDrop(x, y, srcNode);
+                });
             });
-        }
-
-        function updateNodes(nodesIn) {
+        },
+        _updateNodes: function (nodesIn) {
             d3.selection(nodesIn).selectAll("g.node").each(function (d) {
                 d.updateNode();
             });
-        }
-
-        function decorateLinks(linksIn) {
+        },
+        _decorateLinks: function (linksIn) {
             // Insert links underneath nodes
             var linksG = linksIn.insert('g', '.node'),
                 linksLine = linksG.append('polyline'),
@@ -353,34 +363,35 @@ HotUI.Topology = (function () {
             linksG.attr("class", function (d) {
                 return "link " + d.type;
             });
-            
-            linksArrow.attr('d', 'M3,0 L-3,-2 L-3,2 Z');
-        }
 
-        function onZoom() {
-            topG.attr("transform", "translate(" + d3.event.translate + ")" + 
-                       "scale(" + d3.event.scale + ")");
+            linksArrow.attr('d', 'M3,0 L-3,-2 L-3,2 Z');
+        },
+        _onZoom: function () {
+            this._topG.attr("transform", "translate(" + d3.event.translate + ")" +
+                            "scale(" + d3.event.scale + ")");
 
             // updates label backgrounds because text changes size
-            nodes.forEach(function (n) { n.updateNode(); });
-        }
+            this._nodes.forEach(function (n) { n.updateNode(); });
+        },
+        _tick: function (e) {
+            this._layoutSpecificTick(e);
+            this._normalTick(e);
+        },
+        _normalTick: function (e) {
+            function toDegrees(angle) {
+                return angle * (180 / Math.PI);
+            }
 
-        function tick(e) {
-            layoutSpecificTick(e);
-            normalTick(e);
-        }
-
-        function normalTick(e) {
-            node.attr("transform", function (d) {
+            this._node.attr("transform", function (d) {
                 return "translate(" + d.x + ", " + d.y + ")";
             });
 
-            link.attr('transform', function (d) {
+            this._link.attr('transform', function (d) {
                 return 'translate(' + (d.source.x + d.target.x) / 2 + ', ' +
                     (d.source.y + d.target.y) / 2 + ')';
             });
 
-            link.selectAll('polyline')
+            this._link.selectAll('polyline')
                 .attr('points', function (d) {
                     var size = {
                             x: (d.source.x - d.target.x) / 2,
@@ -391,57 +402,45 @@ HotUI.Topology = (function () {
                             size.x + ',' + size.y;
                 });
 
-            link.selectAll('path').attr('transform', function (d) {
-                return 'rotate(' + TO_DEG(Math.atan2(d.target.y - d.source.y,
-                                             d.target.x - d.source.x)) + ')';
+            this._link.selectAll('path').attr('transform', function (d) {
+                return 'rotate(' + toDegrees(Math.atan2(d.target.y - d.source.y,
+                                                 d.target.x - d.source.x)) + ')';
             });
-        }
-
-        function tieredTick(e) {
-            nodes.forEach(function (d) {
+        },
+        _tieredTick: function (e) {
+            this._nodes.forEach(function (d) {
                 // light gravity towards x = 0
-                d.x += (d.focus.x - d.x) * e.alpha * d.focusForce.x; 
+                d.x += (d.focus.x - d.x) * e.alpha * d.focusForce.x;
                 d.y += (d.focus.y - d.y) * e.alpha * d.focusForce.y;
             });
-        }
-
-        function webTick(e) {
-
-        }
-
-        function callOnLinkCreate(source, target) {
-            that._onLinkCreatorCreate(source, target);
-        }
-
-        function onLinkCreatorDrop(x, y) {
+        },
+        _webTick: function () {},
+        _onLinkCreatorDrop: function (x, y, srcNode) {
             var self = this;
 
-            nodes.forEach(function (n) {
+            this._nodes.forEach(function (n) {
                 var dist = Math.sqrt((x - n.x) * (x - n.x) +
                                      (y - n.y) * (y - n.y));
 
-                if (dist <= 15 && n !== self) {
-                    callOnLinkCreate(self.data, n.data);
+                if (dist <= 15 && n !== srcNode) {
+                    self._onLinkCreatorCreate(srcNode.data, n.data);
                 }
             });
-        }
-
-        this.aboutToAddResource = function (posX, posY) {
-            nextResourcePt = {
+        },
+        aboutToAddResource: function (posX, posY) {
+            this._nextResourcePt = {
                 x: posX,
                 y: posY
             };
-        };
-
-        this.updatedResource = function () {
-            updateNodesArray();
-            force.nodes(nodes);
-            update();
-        };
-
-        this.documentToSVGCoords = function (docX, docY) {
-            var pt = svg.node().createSVGPoint();
-            var ctm = topG.node().getScreenCTM();
+        },
+        updatedResource: function () {
+            this._updateNodesArray();
+            this._force.nodes(this._nodes);
+            this._update();
+        },
+        documentToSVGCoords: function (docX, docY) {
+            var pt = this._svg.node().createSVGPoint();
+            var ctm = this._topG.node().getScreenCTM();
 
             pt.x = docX;
             pt.y = docY;
@@ -456,78 +455,74 @@ HotUI.Topology = (function () {
                 x: pt.x,
                 y: pt.y
             };
-        };
-
-        this.setOnResourceClick = function (onClickCallback) {
-            onResourceClickCallback = onClickCallback;
-        };
-
-        this._onLinkCreatorCreate = function () {};
-
-        this.setOnLinkCreatorCreate = function (callback) {
+        },
+        setOnResourceClick: function (onClickCallback) {
+            this._onResourceClickCallback = onClickCallback;
+        },
+        _onLinkCreatorCreate: function () {},
+        setOnLinkCreatorCreate: function (callback) {
             this._onLinkCreatorCreate = callback;
-        };
+        },
+        setData: function (resourcesIn) {
 
-        this.setData = function (resourcesIn) {
-            if (resources) {
-                resources.off('change', that.updatedResource);
-                resources.off('childChange', that.updatedResource);
+            if (this._resources) {
+                this._resources.off('change', this._updatedResourceCB);
+                this._resources.off('childChange', this._updatedResourceCB);
             }
 
-            resources = resourcesIn;
+            this._resources = resourcesIn;
 
-            resources.on('change', that.updatedResource);
-            resources.on('childChange', that.updatedResource);
+            this._resources.on('change', this._updatedResourceCB);
+            this._resources.on('childChange', this._updatedResourceCB);
 
-            updateNodesArray();
+            this._updateNodesArray();
 
-            force.nodes(nodes);
-            update();
-        };
-
-        function getNodeMap() {
-            return nodes.reduce(function (mapOut, curNode) {
+            this._force.nodes(this._nodes);
+            this._update();
+        },
+        _getNodeMap: function () {
+            return this._nodes.reduce(function (mapOut, curNode) {
                     mapOut[curNode.data.getID()] = curNode;
                     return mapOut;
                 }, {});
-        }
-
-        function updateNodesArray() {
-            var nodeMap = getNodeMap(),
-                positions = getSavedPositions(),
+        },
+        _updateNodesArray: function () {
+            var self = this,
+                nodeMap = this._getNodeMap(),
+                positions = this._getSavedPositions(),
                 droppedNode;
 
-            nodes = resources.toArray().map(function (resource) {
+            this._nodes = this._resources.toArray().map(function (resource) {
                 var oldNode = nodeMap[resource.getID()],
                     newNode;
 
                 if (oldNode) {
                     oldNode.data = resource;
                     return oldNode;
-                } else if (nextResourcePt) {
-                    newNode = TopologyNode.create(resource, {
-                        x: nextResourcePt.x,
-                        y: nextResourcePt.y
+                } else if (self._nextResourcePt) {
+                    newNode = HotUI.TopologyNode.factory(resource, {
+                        x: self._nextResourcePt.x,
+                        y: self._nextResourcePt.y
                     });
 
+                    self._nextResourcePt = null;
                     droppedNode = newNode;
-                    nextResourcePt = null;
                     return newNode;
                 } else if (positions.hasOwnProperty(resource.getID())) {
-                    return TopologyNode.create(resource, {
+                    return HotUI.TopologyNode.factory(resource, {
                         x: positions[resource.getID()].x,
                         y: positions[resource.getID()].y
                     });
                 } else {
-                    return TopologyNode.create(resource, {
-                        x: (Math.random() - 0.5) * width,
-                        y: (Math.random() - 0.5) * height,
+                    return HotUI.TopologyNode.factory(resource, {
+                        x: (Math.random() - 0.5) * self._width,
+                        y: (Math.random() - 0.5) * self._height,
                     });
                 }
             });
 
             if (droppedNode) {
-                nodes.forEach(function (node) {
+                this._nodes.forEach(function (node) {
                     var dx, dy;
                     if (node !== droppedNode) {
                         dx = droppedNode.x - node.x;
@@ -539,37 +534,37 @@ HotUI.Topology = (function () {
                     }
                 });
             }
-        }
-
-        function getNode(resource) {
+        },
+        _getNode: function (resource) {
             var i;
 
-            for (i = 0; i < nodes.length; i++) {
-                if (nodes[i].data === resource) {
-                    return nodes[i];
+            for (i = 0; i < this._nodes.length; i++) {
+                if (this._nodes[i].data === resource) {
+                    return this._nodes[i];
                 }
             }
-        }
+        },
+        _buildLinks: function () {
+            var self = this;
 
-        function buildLinks() {
             function addLink(sourceNode, targetResource, type) {
                 // Skip unset resource values
                 if (targetResource.getPrimitiveType() !== String) {
-                    if (getNode(targetResource)) {
-                        links.push({
+                    if (self._getNode(targetResource)) {
+                        self._links.push({
                             'source': sourceNode,
-                            'target': getNode(targetResource),
+                            'target': self._getNode(targetResource),
                             'type': type
                         });
                     } else {
-                        debugger;
+                        console.error("else statement hit when adding links");
                     }
                 }
             }
 
             function addDependsOnLinks(nodeIn) {
                 nodeIn.data.get('depends_on').each(function (i, resourceID) {
-                    var target = resources.getByID(resourceID.get());
+                    var target = self._resources.getByID(resourceID.get());
 
                     if (target) {
                         addLink(nodeIn, target, "depends_on");
@@ -584,7 +579,7 @@ HotUI.Topology = (function () {
                       })
                       .forEach(function (value) {
                           addLink(nodeIn, value.get('get_attr').get('resource'),
-                                   "attribute");
+                                  "attribute");
                       });
             }
 
@@ -595,72 +590,42 @@ HotUI.Topology = (function () {
                       })
                       .forEach(function (value) {
                           addLink(nodeIn, value.get('get_resource'),
-                                   "resource");
+                                  "resource");
                       });
             }
 
-            links = [];
+            this._links = [];
 
-            nodes.forEach(function (curNode) {
+            this._nodes.forEach(function (curNode) {
                 addDependsOnLinks(curNode);
                 addAttributeLinks(curNode);
                 addResourceLinks(curNode);
             });
-        }
-
-        function getSavedPositions() {
+        },
+        _getSavedPositions: function () {
             var positions =
                     JSON.parse(localStorage.getItem('resourcePositions')) || {};
 
             localStorage.removeItem('resourcePositions');
             return positions;
+        },
+        _updateNodeData: function () {
+            this._node = this._node.data(this._nodes,
+                                         function (d) { return d.data.getID(); });
+        },
+        _update: function () {
+            this._updateNodeData();
+            this._decorateNodes(this._node.enter());
+            this._updateNodes(this._node);
+            this._node.exit().remove();
+
+            this._buildLinks();
+            this._link = this._link.data(this._links,
+                                         function () { return Math.random(); });
+            this._force.links(this._links);
+            this._decorateLinks(this._link.enter());
+            this._link.exit().remove();
+
+            this._force.start();
         }
-            
-        function updateNodeData() {
-            node = node.data(nodes, function (d) { return d.data.getID(); });
-        }
-
-        function update() {
-            updateNodeData();
-            decorateNodes(node.enter());
-            updateNodes(node);
-            node.exit().remove();
-
-            buildLinks();
-            link = link.data(links, function (d) { return Math.random(); });
-            force.links(links);
-            decorateLinks(link.enter());
-            link.exit().remove();
-
-            force.start();
-        }
-
-        topG.append('circle')
-             .attr('r', '1')
-             .attr('fill', '#808080')
-             .attr('cx', '0')
-             .attr('cy', '0');
-
-        //setWebLayout();
-        setTieredLayout();
-
-        $(window).unload(function () {
-            var positions = {};
-            nodes.forEach(function (n) {
-                positions[n.data.getID()] = {
-                    x: n.x,
-                    y: n.y
-                };
-            });
-
-            localStorage.setItem('resourcePositions',
-                                 JSON.stringify(positions));
-        });
-
-        this.SET_WEB = setWebLayout;
-        this.SET_TIERED = setTieredLayout;
-        this.FORCE = function () { return force; };
-    }
-
-    return constructor;
-}());
+    });
