@@ -277,7 +277,6 @@ HotUI.Topology = (function () {
         function setWebLayout() {
             force.gravity(0.1)
                  .charge(-200)
-                 .chargeDistance(Number.POSITIVE_INFINITY)
                  .linkDistance(70)
                  .linkStrength(1);
 
@@ -308,8 +307,7 @@ HotUI.Topology = (function () {
                             d.target.instanceof(TopologyNode.Helper) ? 
                                 0.5 :
                             0.03;
-                 })
-                 .chargeDistance(150);
+                 });
 
             layoutSpecificTick = tieredTick;
         }
