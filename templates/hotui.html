@@ -14,9 +14,9 @@
     limitations under the License.
 -->
 
-{% extends 'hotui/hotui_base.html' %}
+{% extends 'hotui_base.html' %}
 
-{% block page %}
+{% block hotui %}
 
 <div id="hotui_app">
     <div id="hotui_bottom_strip">&copy; Rackspace {{ footer_year }}</div>
@@ -38,6 +38,7 @@
             </div>
             <div class="close_button">x</div>
         </div>
+        <div class="download_template">Download Template</div>
         <div class="load_from_url">Load From URL</div>
         <div class="get_json">Get Template</div>
     </div>
@@ -51,12 +52,5 @@
         STACK_REGION = '{{ region_value|safe }}',
         HOTUI_RESOURCE_NAMES = {{ resource_names|safe }};
 </script>
-<script src='{{ STATIC_URL }}js/hotui/util.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/barricade.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/hot.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/form_elements.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/topology.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/side_panel_controller.js' type='text/javascript' charset="utf-8"></script>
-<script src='{{ STATIC_URL }}js/hotui/hotui.js' type='text/javascript' charset="utf-8"></script>
 
 {% endblock %}

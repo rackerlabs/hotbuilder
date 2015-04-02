@@ -100,7 +100,8 @@
 }
 
 #hotui_overlay > .get_json,
-#hotui_overlay > .load_from_url {
+#hotui_overlay > .load_from_url,
+#hotui_overlay > .download_template {
     background-color: red;
     cursor: pointer;
     height: 50px;
@@ -119,6 +120,10 @@
 
 #hotui_overlay > .load_from_url {
     top: 60px;
+}
+
+#hotui_overlay > .download_template {
+    top: 115px;
 }
 
 .load_from_url_input {
@@ -476,7 +481,7 @@
 }
 
 .resource_draggable > div {
-    background-image: url(/static/img/hotui/icon-orchestration.svg);
+    background-image: url(/static/hotui/img/icon-orchestration.svg);
     background-size: cover;
     display: inline-block;
     height: 25px;
@@ -489,33 +494,33 @@
    because lower entries have higher precedence in CSS */
 .resource_draggable[type*=EC2\:\:Instance] > div,
 .resource_draggable[type*=Server] > div {
-    background-image: url(/static/img/hotui/icon-servers.svg);
+    background-image: url(/static/hotui/img/icon-servers.svg);
 }
 
 .resource_draggable[type*=Network] > div {
-    background-image: url(/static/img/hotui/icon-networks.svg);
+    background-image: url(/static/hotui/img/icon-networks.svg);
 }
 
 .resource_draggable[type*=DNS] > div {
-    background-image: url(/static/img/hotui/icon-dns.svg);
+    background-image: url(/static/hotui/img/icon-dns.svg);
 }
 
 .resource_draggable[type*=Key] > div {
-    background-image: url(/static/img/hotui/icon-private-cloud.svg);
+    background-image: url(/static/hotui/img/icon-private-cloud.svg);
 }
 
 .resource_draggable[type*=Trove] > div,
 .resource_draggable[type*=Container] > div,
 .resource_draggable[type*=Volume] > div {
-    background-image: url(/static/img/hotui/icon-block-storage.svg);
+    background-image: url(/static/hotui/img/icon-block-storage.svg);
 }
 
 .resource_draggable[type*=LoadBalancer] > div {
-    background-image: url(/static/img/hotui/icon-load-balancers.svg);
+    background-image: url(/static/hotui/img/icon-load-balancers.svg);
 }
 
 .resource_draggable[type*=AutoScale] > div {
-    background-image: url(/static/img/hotui/icon-auto-scale.svg);
+    background-image: url(/static/hotui/img/icon-auto-scale.svg);
 }
 
 .resource_hidden {

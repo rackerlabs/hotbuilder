@@ -189,8 +189,8 @@ $(function () {
 
     $jsonButton.click(function () {
         $.ajax({
-            type:'POST',
-            url:'/api/json_to_yaml/',
+            type: 'POST',
+            url: ENDPOINTS.jsonToYAML,
             data: {
                 'json': JSON.stringify(template.toJSON(true))
             },
@@ -221,8 +221,8 @@ $(function () {
                     e.stopPropagation();
 
                     $.ajax({
-                        type:'POST',
-                        url:'/api/template_validate/',
+                        type: 'POST',
+                        url: ENDPOINTS.templateValidate,
                         data: {
                             'endpoint': STACK_ENDPOINT,
                             'template': JSON.stringify(template.toJSON(true))
@@ -245,8 +245,8 @@ $(function () {
                     e.stopPropagation();
 
                     $.ajax({
-                        type:'POST',
-                        url:'/api/yaml_to_json/',
+                        type: 'POST',
+                        url: ENDPOINTS.yamlToJSON,
                         data: {
                             'yaml': yaml
                         },
@@ -280,8 +280,8 @@ $(function () {
 
         $urlInput.children('.load_button').click(function () {
             $.ajax({
-                type:'GET',
-                url:'/api/url_to_json/',
+                type: 'GET',
+                url: ENDPOINTS.urlToJSON,
                 data: {
                     url: $urlInput.children('input').val()
                 },
@@ -304,5 +304,22 @@ $(function () {
         });
 
         $loadFromURLButton.append($urlInput);
+    });
+
+    var $downloadTemplateButton = $("#hotui_overlay > .download_template");
+
+    $downloadTemplateButton.click(function () {
+        var templateJSON = JSON.stringify(template.toJSON(true))
+                               .replace(/\"/g, '&quot;'),
+            csrf = $("meta[name='csrftoken']").attr('content'),
+            $form = $('<form method="POST" action="' + 
+                          ENDPOINTS.downloadTemplate + '">' +
+                          '<input type="hidden" name="json" ' +
+                              'value="' + templateJSON + '">' +
+                          '<input type="hidden" name="csrfmiddlewaretoken" ' +
+                              'value="' + csrf + '">');
+        $form.appendTo('body')
+             .submit()
+             .remove();
     });
 });

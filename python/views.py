@@ -17,7 +17,7 @@ import json
 
 from django.views.generic import TemplateView  # noqa
 
-from heat.api import heat_api
+from heat.api.hotui import hotui_api
 from heat.common.region import get_endpoint
 from heat.common.region import get_regions
 
@@ -32,7 +32,7 @@ class IndexView(TemplateView):
         region_value = get_regions(request)[0].get('value')
         heat_endpoint = get_endpoint(request, region_value)
         resource_names = [t.resource_type for t in
-                          heat_api.resource_type_list(request, heat_endpoint)]
+                          hotui_api.resource_type_list(request, heat_endpoint)]
 
         context['region_value'] = region_value
         context['stack_endpoint'] = heat_endpoint
