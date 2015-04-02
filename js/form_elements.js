@@ -422,10 +422,11 @@ $(function () {
                             return match.toUpperCase();
                         })
                         // Capitalize common acronyms
-                        .replace(/uuid|id|ip|dns|ttl|url|ssl/gi,
+                        .replace(/\b(uuid|id|ip|dns|ttl|url|ssl|vpc)\b/gi,
                                  function (match) {
                             return match.toUpperCase();
-                        });
+                        })
+                        .replace(/\bips\b/gi, "IPs");
             }
 
             function getFunctionButton() {
