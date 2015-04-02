@@ -90,6 +90,47 @@ $(function () {
         }
     });
 
+    HotUI.Snippet = HotUI.BaseControl.extend({
+        create: function (htmlSnippet, observers) {
+            var self = HotUI.BaseControl.create.call(this);
+            self._snippet = htmlSnippet;
+            Object.keys(observers).forEach(function (key) {
+                self[key] = observers[key];
+            });
+            return self;
+        },
+        _doHTML: function () {
+            return $(this._snippet);
+        }
+    });
+
+    HotUI.Selector = HotUI.BaseControl.extend({
+        create: function (options) {
+            var self = HotUI.BaseControl.create.call(this),
+                dummy = ko.observable();
+
+            self.value = ko.computed({
+                read: function () {
+                    dummy();
+                    return self._val;
+                },
+                write: function (val) {
+                    self._val = val;
+                    dummy.notifySubscribers();
+                }
+            });
+
+            self._options = options;
+            self._val = options[0];
+
+            return self;
+        },
+        _doHTML: function () {
+            return $('<select data-bind="options: _options, value: value">' +
+                     '</select>');
+        }
+    });
+
     HotUI.MultiControl = HotUI.BaseControl.extend({
         create: function (data, parameters) {
             var self = HotUI.BaseControl.create.call(this, data, parameters);
@@ -125,7 +166,8 @@ $(function () {
                 return '<select data-bind="options: _types, ' +
                                           'optionsText: \'label\', ' +
                                           'optionsValue: \'type\', ' +
-                       'value: value"></select>';
+                                          'value: value">' +
+                       '</select>';
             }
 
             function getInnerControl() {
@@ -965,5 +1007,84 @@ $(function () {
                 control: 'ImmutableObjectControl'
             }
         ]
+    });
+
+    HotUI.ResourcePropertyWrapperSelector = HotUI.BaseControl.extend({
+        create: function (resource) {
+            var self = HotUI.BaseControl.create.call(this);
+            self._resource = resource;
+            return self;
+        },
+        _doHTML: function () {
+            var properties = this._resource.get('properties'),
+                $html = $('<div class="ResourcePropertyWrapperSelector"></div>');
+
+            $html.delegate('p', 'click', function (e) {
+                var $target = $(e.target);
+                $html.find('p.selected').removeClass('selected');
+                $target.addClass('selected');
+            });
+
+            function appendProperties($div, data) {
+                data.each(function (key, value) {
+                    var $label = $('<p>' + key + '<p>'),
+                        $child = $('<div class="property_list"></div>')
+                                     .append($label);
+                    if (value.instanceof(HotUI.HOT.ResourcePropertyWrapper) &&
+                            value.getValue().instanceof(Barricade.Container) &&
+                            !value.getValue().instanceof(HotUI.HOT.IntrinsicFunction)) {
+                        appendProperties($child, value.getValue());
+                    } else if (value.instanceof(Barricade.Container)) {
+                        $label.addClass('disabled');
+                        appendProperties($child, value);
+                    }
+
+                    $div.append($child);
+                });
+            }
+
+            appendProperties($html, properties);
+
+            this._html = $html;
+            
+            return $html;
+        },
+        getSelection: function () {
+            var $html = this._html,
+                $selected = $html.find('p.selected').parent(),
+                curLabel,
+                result = [];
+
+            if ($selected.length) {
+                while (!$selected.is($html)) {
+                    curLabel = $selected.children('p').html();
+                    result.unshift(isNaN(+curLabel) ? curLabel : +curLabel);
+                    $selected = $selected.parent();
+                }
+            }
+
+            return result;
+        }
+    });
+
+    HotUI.ResourceAttributeSelector = HotUI.BaseControl.extend({
+        create: function (resource) {
+            var self = HotUI.BaseControl.create.call(this);
+            self._resource = resource;
+            return self;
+        },
+        _doHTML: function () {
+            var $select = $('<select></select>');
+            
+            this._resource.getAttributeNames().forEach(function (attribute) {
+                $select.append($('<option>' + attribute + '</option>'));
+            });
+
+            this._html = $select;
+            return $select;
+        },
+        getSelection: function () {
+            return this._html.val();
+        }
     });
 });

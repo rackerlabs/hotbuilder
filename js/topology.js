@@ -409,6 +409,10 @@ HotUI.Topology = (function () {
 
         }
 
+        function callOnLinkCreate(source, target) {
+            that._onLinkCreatorCreate(source, target);
+        }
+
         function onLinkCreatorDrop(x, y) {
             var self = this;
 
@@ -417,7 +421,7 @@ HotUI.Topology = (function () {
                                      (y - n.y) * (y - n.y));
 
                 if (dist <= 15 && n !== self) {
-                    self.data.get('depends_on').push(n.data.getID());
+                    callOnLinkCreate(self.data, n.data);
                 }
             });
         }
@@ -457,6 +461,12 @@ HotUI.Topology = (function () {
         this.setOnResourceClick = function (onClickCallback) {
             onResourceClickCallback = onClickCallback;
         };
+
+        this._onLinkCreatorCreate = function () {};
+
+        this.setOnLinkCreatorCreate = function (callback) {
+            this._onLinkCreatorCreate = callback;
+        }
 
         this.setData = function (resourcesIn) {
             if (resources) {

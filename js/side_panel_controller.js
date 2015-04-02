@@ -135,6 +135,86 @@ HotUI.SidePanelController = (function () {
             displayContent($html);
         };
 
+        this.showLinkCreatePanel = function (sourceResource, targetResource) {
+            var getAttribute = HotUI.HOT.GetAttribute.create(),
+                value = getAttribute.get('get_attr').get('value'),
+                $html = $('<div></div>'),
+                $dependencyTypeSelector = HotUI.Selector.create(
+                    ['General', 'Resource', 'Attribute']),
+                $sourceBox = HotUI.Snippet.create(
+                    '<div data-bind="visible: showProps()"></div>',
+                    {showProps: showProps}),
+                $destBox = HotUI.Snippet.create(
+                    '<div data-bind="visible: showAttrs()"></div>',
+                    {showAttrs: showAttrs}),
+                $createButton = $('<div class="create_dependency_button">Create</div>'),
+                $attribute = HotUI.ResourceAttributeSelector.create(targetResource),
+                $value = HotUI.SchemalessContainerControl.create(value),
+                $selector = HotUI.ResourcePropertyWrapperSelector
+                                 .create(sourceResource);
+
+            function showProps() {
+                return $dependencyTypeSelector.value() !== 'General';
+            }
+
+            function showAttrs() {
+                return $dependencyTypeSelector.value() === 'Attribute';
+            }
+
+            function clickCreateDependency() {
+                var path = $selector.getSelection(),
+                    dependencyType = $dependencyTypeSelector.value();
+
+                function getNode(data, path) {
+                    if (path.length) {
+                        if (data.instanceof(
+                                HotUI.HOT.ResourcePropertyWrapper)) {
+                            data = data.getValue();
+                        }
+
+                        return getNode(data.get(path[0]), path.slice(1));
+                    } else {
+                        return data;
+                    }
+                }
+
+                if (dependencyType === "General") {
+                    sourceResource.get('depends_on')
+                                  .push(targetResource.getID());
+                } else if (!path.length) {
+                    return;
+                } else if (dependencyType === "Resource") {
+                    getNode(sourceResource.get('properties'), path)
+                        .setValue(HotUI.HOT.GetResource.create());
+                    getNode(sourceResource.get('properties'), path)
+                        .getValue().set('get_resource', targetResource);
+                } else {
+                    getAttribute.get('get_attr')
+                        .set('attribute', $attribute.getSelection());
+                    getNode(sourceResource.get('properties'), path)
+                        .setValue(getAttribute);
+                }
+            }
+
+            getAttribute.get('get_attr').set('resource', targetResource);
+
+            $createButton.click(clickCreateDependency);
+
+            $html.append("<h2>Create Resource Dependency</h2>",
+                         $dependencyTypeSelector.html(),
+                         '<br>',
+                         sourceResource.getID(),
+                         '<br>',
+                         $sourceBox.html().append($selector.html()),
+                         '<br>',
+                         'depends on <br>' + targetResource.getID(),
+                         '<br>',
+                         $destBox.html().append($attribute.html(), $value.html()),
+                         '<br>',
+                         $createButton);
+            displayContent($html);
+        };
+
         $closeButton.on("click", function () {
             if (!isHidden) {
                 $container.hide();
