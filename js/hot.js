@@ -19,7 +19,7 @@ $(function () {
         neededResources = [];
 
     try {
-        resourceTypeObj = JSON.parse(localStorage.getItem('resourceTypes'))
+        resourceTypeObj = JSON.parse(localStorage.getItem('resourceTypes'));
         if (resourceTypeObj === null || typeof resourceTypeObj !== 'object' ||
                 resourceTypeObj instanceof Array) {
             resourceTypeObj = {};
@@ -58,7 +58,7 @@ createHOT = function (resourceTypeObj) {
     var hot = {};
 
     //
-    // Set up ResourceTypes so that different Resource classes can be created 
+    // Set up ResourceTypes so that different Resource classes can be created
     // later.
     //
 
@@ -72,10 +72,7 @@ createHOT = function (resourceTypeObj) {
             }
 
             Barricade.Observable.call(self);
-
-            if (parameters.hasOwnProperty('id')) {
-                Barricade.Identifiable.call(self, parameters.id);
-            }
+            Barricade.Identifiable.call(self, parameters.id);
 
             if (value) {
                 self.setValue(value);
@@ -171,89 +168,85 @@ createHOT = function (resourceTypeObj) {
         }
     });
 
-    hot.ResourcePropertyFactory = function (json, parameters) {
-        var propertyOut,
-            propertyConstructor;
+    function constraintFactory(constraintObj) {
+        var types = {
+                'range': function (constraint) {
+                    var min = constraint.min,
+                        max = constraint.max;
 
-        function getConstraints(constraintsArray) {
-            var types = {
-                    'range': function (constraint) {
-                        var min = constraint.min,
-                            max = constraint.max;
-
-                        function getMessage() {
-                            if (min === undefined) {
-                                return 'Value must be less than ' + max;
-                            } else if (max === undefined) {
-                                return 'Value must be greater than ' + min;
-                            }
-                            return 'Value must be between ' +
-                                min + ' and ' + max;
+                    function getMessage() {
+                        if (min === undefined) {
+                            return 'Value must be less than ' + max;
+                        } else if (max === undefined) {
+                            return 'Value must be greater than ' + min;
                         }
+                        return 'Value must be between ' +
+                            min + ' and ' + max;
+                    }
 
-                        return function (val) {
-                            return ((min === undefined || val >= min) &&
-                                    (max === undefined || val <= max)) ||
-                                   getMessage();
-                        };
-                    },
-                    'length': function (constraint) {
-                        var min = constraint.min,
-                            max = constraint.max;
+                    return function (val) {
+                        return ((min === undefined || val >= min) &&
+                                (max === undefined || val <= max)) ||
+                               getMessage();
+                    };
+                },
+                'length': function (constraint) {
+                    var min = constraint.min,
+                        max = constraint.max;
 
-                        function getMessage() {
-                            if (min === undefined) {
-                                return 'Must have fewer than ' +
-                                    max + ' letters';
-                            } else if (max === undefined) {
-                                return 'Must have more than ' +
-                                    min + ' letters';
-                            }
-                            return 'Must have between ' +
-                                min + ' and ' + max + ' letters';
+                    function getMessage() {
+                        if (min === undefined) {
+                            return 'Must have fewer than ' +
+                                max + ' letters';
+                        } else if (max === undefined) {
+                            return 'Must have more than ' +
+                                min + ' letters';
                         }
+                        return 'Must have between ' +
+                            min + ' and ' + max + ' letters';
+                    }
 
-                        return function (val) {
-                            return ((min === undefined || val.length >= min) &&
-                                    (max === undefined || val.length <= max)) ||
-                                   getMessage();
-                        };
-                    },
-                    'allowed_values': function (constraint) {
-                        return function (val) {
-                            console.log((constraint.indexOf(val) > -1) ||
-                                ('Value must be one of ' +
-                                 constraint.join(', ')));
-                            return (constraint.indexOf(val) > -1) ||
-                                ('Value must be one of ' +
-                                 constraint.join(', '));
-                        };
-                    },
-                    'allowed_pattern': function (constraint) {
-                        var regex = new RegExp(constraint);
-                        return function (val) {
-                            return regex.test(val) ||
-                                ('Must match pattern: ' + constraint);
-                        };
-                    },
-                    'custom_constraint': function () {
-                        return function () { return true; };
-                    }
-                };
-            function getConstraint(constraintObj) {
-                for (var t in types) {
-                    if (constraintObj.hasOwnProperty(t)) {
-                        return types[t](constraintObj[t]);
-                    }
+                    return function (val) {
+                        return ((min === undefined || val.length >= min) &&
+                                (max === undefined || val.length <= max)) ||
+                               getMessage();
+                    };
+                },
+                'allowed_values': function (constraint) {
+                    return function (val) {
+                        console.log((constraint.indexOf(val) > -1) ||
+                            ('Value must be one of ' +
+                             constraint.join(', ')));
+                        return (constraint.indexOf(val) > -1) ||
+                            ('Value must be one of ' +
+                             constraint.join(', '));
+                    };
+                },
+                'allowed_pattern': function (constraint) {
+                    var regex = new RegExp(constraint);
+                    return function (val) {
+                        return regex.test(val) ||
+                            ('Must match pattern: ' + constraint);
+                    };
+                },
+                'custom_constraint': function () {
+                    return function () { return true; };
                 }
-                
-                console.log('Constraint type not found: ', constraintObj);
-                return function () { return true; };
+            };
+
+        function getConstraint(constraintObj) {
+            for (var t in types) {
+                if (constraintObj.hasOwnProperty(t)) {
+                    return types[t](constraintObj[t]);
+                }
             }
 
-            return constraintsArray.map(getConstraint);
+            console.log('Constraint type not found: ', constraintObj);
+            return function () { return true; };
         }
+    }
 
+    hot.ResourcePropertyFactory = function (json, parameters) {
         if (!json.hasOwnProperty('schema')) {
             if (json.type === 'list') {
                 json.schema = {
@@ -266,17 +259,15 @@ createHOT = function (resourceTypeObj) {
         }
 
         if (json.type === 'map' && !json.hasOwnProperty('schema')) {
-            propertyConstructor = hot.ResourceProperty_map2;
-        } else {
-            propertyConstructor = hot['ResourceProperty_' + json.type];
+            return hot.ResourceProperty_map2.create(json, parameters)
         }
+        return hot['ResourceProperty_' + json.type].create(json, parameters);
+    };
 
-        propertyOut = propertyConstructor.create(json, parameters);
-
-        propertyOut.getSchema = function () {
+    hot.ResourceProperty = Barricade.ImmutableObject.extend({
+        getSchema: function () {
             var schema = {},
                 wrapperSchema = {},
-                classOut,
                 types = {
                     'map': Object,
                     'list': Array,
@@ -286,7 +277,11 @@ createHOT = function (resourceTypeObj) {
                     'boolean': Boolean
                 };
 
+            wrapperSchema['@required'] = this.get('required').get();
             schema['@type'] = types[this.get('type').get()];
+            schema['@required'] = this.get('required').get();
+            schema['@constraints'] =
+                this.get('constraints').get().map(constraintFactory);
 
             if (schema['@type'] === Object) {
                 if (this.get('schema')) {
@@ -297,25 +292,15 @@ createHOT = function (resourceTypeObj) {
             } else if (schema['@type'] === Array) {
                 schema['*'] = this.get('schema').get('*').getSchema();
             }
-            
-            wrapperSchema['@required'] = this.get('required').get();
-            schema['@required'] = this.get('required').get();
 
-            schema['@constraints'] =
-                getConstraints(this.get('constraints').get());
-
-            classOut = hot.ResourcePropertyWrapper.extend({
-                _innerClass: Barricade.create(schema),
-                _description: this.get('description')
-            }, wrapperSchema);
-
-            return {'@class': classOut};
-        };
-
-        return propertyOut;
-    };
-
-    hot.ResourceProperty = Barricade.ImmutableObject.extend({}, {
+            return {
+                '@class': hot.ResourcePropertyWrapper.extend({
+                    _innerClass: Barricade.create(schema),
+                    _description: this.get('description')
+                }, wrapperSchema)
+            };
+        }
+    }, {
         '@type': Object,
         'type': {'@type': String},
         'description': {'@type': String},
@@ -336,7 +321,7 @@ createHOT = function (resourceTypeObj) {
     });
 
     hot.ResourceProperty_list = hot.ResourceProperty.extend({}, {
-        'default': {'@type': Array}, 
+        'default': {'@type': Array},
         'schema': {
             '@type': Object,
             '*': {
@@ -362,7 +347,54 @@ createHOT = function (resourceTypeObj) {
             'description': {'@type': String}
     });
 
-    hot.ResourceType = Barricade.create({
+    hot.ResourceType = Barricade.ImmutableObject.extend({
+        getSchema: function () {
+            var propertySchema = {
+                    '@type': Object,
+                    '@required': false
+                };
+
+            this.get('properties').each(function (i, self) {
+                propertySchema[self.getID()] = self.getSchema();
+            });
+
+            if (this.getID() === 'OS::Heat::ResourceGroup') {
+                propertySchema.resource_def = {
+                    '@type': Object,
+                    'type': {'@type': String},
+                    'properties': {
+                        '@type': Object,
+                        '@ref': {
+                            to: hot.ResourceProperties,
+                            needs: function () {
+                                return hot.ResourceProperties;
+                            },
+                            resolver: function (json, properties) {
+                                var type = properties.get('resource_def')
+                                                     .get('type');
+                                console.log('resolving resource_def');
+                                type.on('change', function () {
+                                    console.log('resource def changed to ' +
+                                                type.get());
+                                    properties
+                                        .get('resource_def')
+                                        .set('properties',
+                                             hot.ResourcePropertiesFactory(
+                                                 undefined, undefined,
+                                                 type.get()));
+                                });
+
+                                return hot.ResourcePropertiesFactory(
+                                           json.get(), undefined, type.get());
+                            }
+                        }
+                    }
+                };
+            }
+
+            return propertySchema;
+        }
+    }, {
         '@type': Object,
 
         'attributes': {
@@ -398,10 +430,10 @@ createHOT = function (resourceTypeObj) {
 
             } else if (json.hasOwnProperty('get_attr')) {
                 return hot.GetAttribute.create(json, parameters);
-                
+
             } else if (json.hasOwnProperty('get_param')) {
                 return hot.GetParameter.create(json, parameters);
-                
+
             } else if (json.hasOwnProperty('get_file')) {
                 return hot.GetFile.create(json, parameters);
 
@@ -551,92 +583,30 @@ createHOT = function (resourceTypeObj) {
     hot.ResourcePropertiesFactory = function (json, parameters, type) {
         var propertyClass = hot['ResourceProperties_' + type],
             propertiesOut;
-            
+
         if (!propertyClass) {
             propertyClass = hot.ResourcePropertiesNull;
         }
 
-        propertiesOut = propertyClass.create(json, parameters);
-
-        propertiesOut.getBackingType = propertyClass.getBackingType;
-        return propertiesOut;
+        return propertyClass.create(json, parameters);
     };
 
     // Create various hot.ResourceProperties_<type> types
     // (ex. hot["ResourceProperties_AWS::EC2::Instance"])
     (function () {
-        var allResourceTypes = hot.resourceTypes.toArray(),
-            connectToFunctions = {
-            };
+        var allResourceTypes = hot.resourceTypes.toArray();
 
-        function getConnectToFunction(type) {
-            return connectToFunctions[type] || function () {};
-        }
+        // null resource type to aid ResourceGroup
+        allResourceTypes.push(hot.ResourceType.create({}, {id: 'null'}));
 
-        function getPropertiesSchema(propertyObj) {
-            var schemaOut = {
-                    '@type': Object,
-                    '@required': false
-                };
-
-            propertyObj.each(function (i, value) {
-                schemaOut[value.getID()] = value.getSchema();
-            });
-
-            return schemaOut;
-        }
-
-        allResourceTypes.push({
-            getID: function () {return "null";},
-            get: function () { return {each: function () {}}; }
-        });
-
-        allResourceTypes.forEach(function (value) {
-            var propertySchema = getPropertiesSchema(
-                                      value.get('properties'));
-            
-            if (value.getID() === 'OS::Heat::ResourceGroup') {
-                propertySchema.resource_def = {
-                    '@type': Object,
-                    'type': {'@type': String},
-                    'properties': {
-                        '@type': Object,
-                        '@ref': {
-                            to: hot.ResourceProperties,
-                            needs: function () {
-                                return hot.ResourceProperties;
-                            },
-                            resolver: function (json, properties) {
-                                var type = properties.get('resource_def')
-                                                     .get('type');
-                                console.log('resolving resource_def');
-                                type.on('change', function () {
-                                    console.log('resource def changed to ' +
-                                                type.get());
-                                    properties
-                                        .get('resource_def')
-                                        .set('properties',
-                                             hot.ResourcePropertiesFactory(
-                                                 undefined, undefined,
-                                                 type.get()));
-                                });
-
-                                return hot.ResourcePropertiesFactory(
-                                           json.get(), undefined, type.get());
-                            }
-                        }
-                    }
-                };
-            }
-
-            hot['ResourceProperties_' + value.getID()] =
+        allResourceTypes.forEach(function (resourceType) {
+            hot['ResourceProperties_' + resourceType.getID()] =
                 hot.ResourceProperties.extend({
-                    getBackingType: function () {
-                        return value;
+                        getBackingType: function () {
+                            return resourceType;
+                        }
                     },
-                    connectTo: getConnectToFunction(value.getID())
-                },
-                propertySchema);
+                    resourceType.getSchema());
         });
     }());
 
@@ -688,6 +658,22 @@ createHOT = function (resourceTypeObj) {
         connectTo: function (resource) {
             this.getProperties().connectTo(resource);
             resource.getProperties().connectTo(this);
+        },
+        _docsBaseURL: "http://docs.rs-heat.com/raxdox/",
+        getDocsLink: function () {
+            var resourceType = this.get('type').get(),
+                nameTokens = resourceType.split('::'),
+                resourceBase;
+            if (nameTokens[0] === 'OS') {
+                resourceBase = "openstack";
+            } else if (nameTokens[0] === 'Rackspace') {
+                resourceBase = "rackspace";
+            } else {
+                console.warn("Resource type not found: %s", nameTokens[0]);
+                return this._docsBaseURL;
+            }
+            return this._docsBaseURL + resourceBase + '.html#' +
+                   resourceType;
         }
     }, {
         '@type': Object,
@@ -968,7 +954,7 @@ createHOT = function (resourceTypeObj) {
             '@class': hot.Primitive,
             '@factory': hot.Primitive.Factory
         };
-        
+
         hot.Primitive.string = Barricade.Primitive.extend(primitiveExtension,
                                                           {'@type': String});
         hot.Primitive.bool = Barricade.Primitive.extend(primitiveExtension,
@@ -1002,4 +988,4 @@ createHOT = function (resourceTypeObj) {
 
     return hot;
 
-}
+};
