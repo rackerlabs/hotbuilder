@@ -14,10 +14,6 @@
     limitations under the License.
 -->
 
-{% extends 'hotui_base.html' %}
-
-{% block hotui %}
-
 <div id="hotui_app">
     <div id="hotui_bottom_strip">&copy; Rackspace {{ footer_year }}</div>
     <div id="hotui_topology">
@@ -52,5 +48,3 @@
         STACK_REGION = '{{ region_value|safe }}',
         HOTUI_RESOURCE_NAMES = {{ resource_names|safe }};
 </script>
-
-{% endblock %}

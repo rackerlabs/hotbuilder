@@ -24,7 +24,7 @@ from heat.common.region import get_regions
 logger = logging.getLogger(__name__)
 
 class IndexView(TemplateView):
-    template_name = 'hotui/hotui.html'
+    template_name = 'hotui/hotui_base.html'
 
     def get_context_data(self, **kwargs):
         context = {}

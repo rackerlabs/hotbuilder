@@ -54,7 +54,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
         return this.extend(properties);
     },
-    _iconBaseURL: '/static/img/hotui/',
+    _iconBaseURL: '/static/hotui/img/',
     focus: {x: 0, y: 0},
     focusForce: {x: 0.5, y: 0.5},
     getIconURL: function () {
