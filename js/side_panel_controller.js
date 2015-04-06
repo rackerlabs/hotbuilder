@@ -17,14 +17,41 @@ HotUI.SidePanelController = BaseObject.extend({
         var self = this.extend({
                 _isHidden: false,
                 _$container: $container,
-                _$content: $content
+                _$content: $content,
+                _$navbar: $container.children('.hotui_side_panel_nav')
             });
+
+        self._setupDrag();
 
         $closeButton.on("click", function () {
             if (!self._isHidden) {
                 self._$container.hide();
                 self._isHidden = true;
             }
+        });
+
+        self._$navbar.append(
+            '<div class="nav_button" name="resources">Resources</div>' +
+            '<div class="nav_button" name="parameters">Parameters</div>' +
+            '<div class="nav_button" name="outputs">Outputs</div>' +
+            '<div class="nav_button" name="options">Template Options</div>');
+
+        self._$navbar.children('.nav_button').on('click', function () {
+            var $button = $(this),
+                selection = $button.attr('name');
+
+            if (selection === 'resources') {
+                self.showAddResourcePanel();
+            } else if (selection === 'parameters') {
+                self.showParameters();
+            } else if (selection === 'outputs') {
+                self.showOutputs();
+            } else if (selection === 'options') {
+                self.showTemplateOptions();
+            }
+
+            $button.siblings('.active').removeClass('active');
+            $button.addClass('active');
         });
 
         return self;
@@ -52,20 +79,165 @@ HotUI.SidePanelController = BaseObject.extend({
                        attribute.get('description').get();
             }).join("<br>");
     },
-    showResource: function (resource, template) {
-        var $html = $('<div></div>'),
+    _setupDrag: function () {
+        var self = this,
+            $overlay = $("#hotui_overlay");
+
+        function onDragStart() {
+            var $target = $(this),
+                $replacement = $target.clone(),
+                targetOffset = $target.offset(),
+                overlayOffset = $overlay.offset(),
+                targetLeft = targetOffset.left - overlayOffset.left,
+                targetTop = targetOffset.top - overlayOffset.top,
+                posDoc = d3.mouse($('body')[0]),
+                pos = d3.mouse($overlay[0]);
+
+            d3.select($replacement[0]).call(self._drag); // Attach handler
+
+            $replacement.addClass("replacement")
+                .css("opacity", "0")
+                .insertAfter($target);
+
+            $target.width($target.width()) // Prevent auto-resizing on drag
+                .appendTo($overlay)
+                .css({
+                    'left': targetLeft,
+                    position: "absolute",
+                    'top': targetTop
+                })
+                .attr({
+                    dragStartX: posDoc[0],
+                    dragStartY: posDoc[1]
+                });
+        }
+
+        function onDrag() {
+            var $target = $(this),
+                pos = d3.mouse($overlay[0]);
+
+            $target.css({
+                'left': pos[0] - 15,
+                'top': pos[1] - 15
+            });
+        }
+
+        function onDragEnd() {
+            var $target = $(this),
+                posDoc = d3.mouse($('body')[0]);
+
+            function outsideSidePanel() {
+                var pos = d3.mouse(self._$container[0]);
+                return pos[0] < 0 || pos[0] > self._$container.width() ||
+                       pos[1] < 0 || pos[1] > self._$container.height();
+            }
+
+            function didNotMove() {
+                return posDoc[0] === +$target.attr("dragStartX") &&
+                       posDoc[1] === +$target.attr("dragStartY");
+            }
+
+            self._$content.children(".replacement")
+                          .animate({ opacity: 1 }, 500)
+                          .removeClass("replacement");
+
+            $overlay.children(".resource_draggable").remove();
+
+            if (outsideSidePanel() || didNotMove()) {
+                self._onResourceDrop(posDoc[0], posDoc[1],
+                                     $target.attr("type"));
+            }
+        }
+
+        this._drag = d3.behavior.drag()
+                                .on("dragstart", onDragStart)
+                                .on("drag", onDrag)
+                                .on("dragend", onDragEnd);
+    },
+    _onResourceDrop: function () {},
+    setTemplate: function (newTemplate) {
+        this._template = newTemplate;
+    },
+    setOnResourceDrop: function (callback) {
+        this._onResourceDrop = callback;
+        return this;
+    },
+    showAddResourcePanel: function () {
+        var html = "";
+
+        function safePush(obj, key, val) {
+            obj[key] = obj[key] || [];
+            obj[key].push(val);
+        }
+
+        function getSection(resourceType, sectionNum) {
+            return resourceType.getID().split('::')[sectionNum];
+        }
+
+        function mapSectionFactory(sectionNum) {
+            return function (objOut, resType) {
+                safePush(objOut, getSection(resType, sectionNum), resType);
+                return objOut;
+            };
+        }
+
+        html += '<h2>Add Resource</h2>';
+
+        var resMap = HotUI.HOT.resourceTypes.toArray()
+                                            .reduce(mapSectionFactory(0), {});
+
+        Object.keys(resMap).forEach(function (key) {
+            resMap[key] = resMap[key].reduce(mapSectionFactory(1), {});
+        });
+
+        console.log(resMap);
+
+        Object.keys(resMap).sort().forEach(function (sec0) {
+            html += '<hr>';
+            html += Snippy('<h3 class="resource_org">${0}</h3>')([sec0]);
+
+            Object.keys(resMap[sec0]).sort().forEach(function (sec1) {
+                html += '<h4 class="resource_class">' + sec1 + '</h4>';
+
+                resMap[sec0][sec1].sort(function (el1, el2) {
+                    return getSection(el1, 2).localeCompare(getSection(el2, 2));
+                }).forEach(function (resType) {
+                    html += Snippy(
+                        '<div class="resource_draggable" type="${type}">' +
+                        '<div></div>${sec}</div>')({
+                            type: resType.getID(),
+                            sec: getSection(resType, 2)
+                        });
+                });
+            });
+        });
+
+        this.displayContent(html);
+
+        d3.selectAll(".resource_draggable")
+            .call(this._drag);
+    },
+    showResource: function (resource) {
+        var self = this,
+            $html = $('<div></div>'),
             backingType = resource.get('properties').getBackingType(),
             attributesHTML = this._getAttributesHTML(resource.getAttributes()),
-            resourceControl = HotUI.FormControl(resource,
-                                                {'template': template}),
+            resourceControl = HotUI.FormControl(resource, {
+                'template': this._template
+            }),
             $resourceID,
             $deleteResourceButton;
 
-        $html.append($('<h2><input class="resource_id" type="text" ' +
-                'value="' + resource.getID() + '"></h2>' +
-                '<br><a href="' + resource.getDocsLink() +
-                    '" target="_blank">Docs</a>' +
-                '<br><a class="delete_resource">Delete</a>'));
+        this._$navbar.children('.hotui_nav_button.active')
+                     .removeClass("active");
+
+        $html.append($(Snippy(
+            '<h2><input class="resource_id" type="text" value="${id}"></h2>' +
+            '<br><a href="${docsURL}" target="_blank">Docs</a>' +
+            '<br><a class="delete_resource">Delete</a>')({
+                id: resource.getID(),
+                docsURL: resource.getDocsLink()
+            })));
         $html.append('<hr>');
         $html.append('Attributes:<br>' + (attributesHTML || 'None<br>'));
         $html.append('<hr>');
@@ -82,42 +254,40 @@ HotUI.SidePanelController = BaseObject.extend({
 
         $deleteResourceButton.click(function () {
             var i,
-                resources = template.get('resources');
+                resources = self._template.get('resources');
 
             for (i = 0; i < resources.length(); i++) {
                 if (resources.get(i).getID() === resource.getID()) {
                     resources.remove(i);
                 }
             }
-            this.displayContent('');
+            self.displayContent('');
         });
     },
-    showParameters: function (parameters) {
-        var myControl = HotUI.FormControl(parameters),
-            myHTML = [];
-
-        myHTML.push('<h2>Parameters</h2>');
-        myHTML.push('<br>');
-        myHTML.push(myControl.html());
-
-        this.displayContent(myHTML);
+    showParameters: function () {
+        this.displayContent([
+            '<h2>Parameters</h2>',
+            '<br>',
+            HotUI.FormControl(this._template.get('parameters')).html(),
+        ]);
     },
-    showOutputs: function (outputs, template) {
-        var myControl = HotUI.FormControl(outputs, {'template': template}),
-            myHTML = [];
-
-        myHTML.push('<h2>Outputs</h2>');
-        myHTML.push('<br');
-        myHTML.push(myControl.html());
-
-        this.displayContent(myHTML);
+    showOutputs: function () {
+        this.displayContent([
+            '<h2>Outputs</h2>',
+            '<br>',
+            HotUI.FormControl(this._template.get('outputs'), {
+                'template': this._template
+            }).html()
+        ]);
     },
-    showTemplateOptions: function (heatTemplateVersion, description) {
+    showTemplateOptions: function () {
         var $html = $('<div></div>'),
             versionControl = HotUI.StringControl.create(
-                                heatTemplateVersion, 'Heat Template Version'),
+                                 this._template.get('heat_template_version'),
+                                 'Heat Template Version'),
             descriptionControl = HotUI.StringControl.create(
-                                    description, 'Description');
+                                     this._template.get('description'),
+                                     'Description');
 
         $html.append('<h2>Template Options</h2>Heat Template Version:<br>',
                     versionControl.html(), '<br><br>',

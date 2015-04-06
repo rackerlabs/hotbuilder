@@ -159,31 +159,50 @@
     padding: 5px;
 }
 
-#hotui_nav {
-    background-color: white;
-    border-radius: 4px;
-    left: 10px;
-    opacity: 0.95;
-    position: absolute;
-    top: 10px;
-}
-
 #hotui_side_panel {
-    bottom: 10px;
-    left: 10px;
+    background-color: #f0f0f0;
+    bottom: 0;
+    left: 0;
     position: absolute;
-    width: 40%;
-    top: 60px;
+    width: 400px;
+    top: 0;
 }
 
 #hotui_side_panel_content {
-    bottom: 5px;
-    left: 5px;
+    bottom: 30px;
+    left: 0;
     overflow-y: auto;
-    padding-right: 5px;
+    padding: 5px 10px;
     position: absolute;
     right: 5px;
-    top: 25px;
+    top: 0;
+}
+
+.hotui_side_panel_nav {
+    background-color: #e0e0e0;
+    bottom: 0;
+    height: 30px;
+    left: 0;
+    position: absolute;
+    right: 0;
+    text-align: center;
+}
+
+.hotui_side_panel_nav > .nav_button {
+    cursor: pointer;
+    display: inline-block;
+    height: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 5px;
+}
+
+.hotui_side_panel_nav > .nav_button:hover {
+    background-color: #d0d0d0;
+}
+
+.hotui_side_panel_nav > .nav_button.active {
+    background-color: #c0c0c0;
 }
 
 #hotui_side_panel_content::-webkit-scrollbar {
@@ -191,6 +210,7 @@
 }
 
 #hotui_side_panel_content::-webkit-scrollbar-track {
+    margin: 5px;
 }
 
 #hotui_side_panel_content::-webkit-scrollbar-thumb {
@@ -200,6 +220,8 @@
 
 #hotui_side_panel_content hr {
     border-top: 1px solid #888;
+    margin-bottom: 10px;
+    margin-top: 10px;
 }
 
 #hotui_side_panel_content .property_map {
@@ -476,7 +498,13 @@
  */
 
 /* Add Resource */
+.resource_org {
+    margin-top: 10px;
+    text-align: center;
+}
+
 .resource_draggable {
+    margin-left: 15px;
     position: relative;
 }
 
