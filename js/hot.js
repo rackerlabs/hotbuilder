@@ -12,48 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var createHOT;
-
-$(function () {
-    var resourceTypeObj,
-        neededResources = [];
-
-    try {
-        resourceTypeObj = JSON.parse(localStorage.getItem('resourceTypes'));
-        if (resourceTypeObj === null || typeof resourceTypeObj !== 'object' ||
-                resourceTypeObj instanceof Array) {
-            resourceTypeObj = {};
-        }
-    } catch (e) {
-        resourceTypeObj = {};
-    }
-
-    HOTUI_RESOURCE_NAMES.forEach(function (type) {
-        if (!resourceTypeObj.hasOwnProperty(type)) {
-            neededResources.push(type);
-        }
-    });
-
-    if (neededResources.length > 0) {
-        jQuery.ajax({
-            url: ENDPOINTS.resourceTypeShow + STACK_REGION + '/' +
-                neededResources.join(','),
-            success: function(data) {
-                Object.keys(data).forEach(function (type) {
-                    resourceTypeObj[type] = data[type];
-                });
-
-                localStorage.setItem('resourceTypes',
-                                     JSON.stringify(resourceTypeObj));
-            },
-            async: false
-        });
-    }
-
-    HotUI.HOT = createHOT(resourceTypeObj);
-});
-
-createHOT = function (resourceTypeObj) {
+function createHOT(resourceTypeObj) {
     // create namespace
     var hot = {};
 
@@ -987,5 +946,4 @@ createHOT = function (resourceTypeObj) {
     }());
 
     return hot;
-
-};
+}

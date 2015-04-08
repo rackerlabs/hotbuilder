@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-$(function () {
+function createFormElementClasses() {
     HotUI.FormControl = function (data, parameters) {
         if (typeof parameters === 'undefined') {
             parameters = {
@@ -1090,4 +1090,4 @@ $(function () {
             return this._html.val();
         }
     });
-});
+}
