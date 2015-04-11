@@ -37,14 +37,17 @@
 }
 
 #hotui_beta_warning {
-    position: absolute;
     left: 50%;
+    position: absolute;
+    top: 38px;
+    z-index: 2000;
 }
 
 #hotui_beta_warning > p {
-    position: relative;
-    left: -50%;
     color: red;
+    left: -50%;
+    margin: 0;
+    position: relative;
 }
 
 /*
@@ -52,7 +55,7 @@
  */
 #hotui_topology {
     bottom: 0;
-    left: 0;
+    left: 400px;
     position:absolute;
     right: 0;
     top: 0;
@@ -97,66 +100,6 @@
 
 #hotui_overlay > .panel-heading {
     padding: 0;
-}
-
-#hotui_overlay > .get_json,
-#hotui_overlay > .load_from_url,
-#hotui_overlay > .download_template {
-    background-color: red;
-    cursor: pointer;
-    height: 50px;
-    width: 200px;
-    text-align:center;
-    position: absolute;
-    right: 5px;
-    border-radius: 10px;
-    line-height: 50px;
-    font-size: 20px;
-}
-
-#hotui_overlay > .get_json {
-    top: 5px;
-}
-
-#hotui_overlay > .load_from_url {
-    top: 60px;
-}
-
-#hotui_overlay > .download_template {
-    top: 115px;
-}
-
-.load_from_url_input {
-    background-color: white;
-    border: 1px solid black;
-    cursor: default;
-    font-size: 18px;
-    line-height: 18px;
-    padding: 10px;
-    position: absolute;
-    right: 0;
-    top: 0;
-    white-space: nowrap;
-}
-
-.load_from_url_input > input {
-    width: 300px;
-}
-
-.load_from_url_input > .load_button {
-    background-color: lime;
-    cursor: pointer;
-    display: inline-block;
-    margin: 5px;
-    padding: 5px;
-}
-
-.load_from_url_input > .close_button {
-    background-color: red;
-    cursor: pointer;
-    display: inline-block;
-    margin: 5px;
-    padding: 5px;
 }
 
 #hotui_side_panel {
@@ -233,6 +176,62 @@
     border: 2px solid aqua;
     padding: 2px;
 }
+
+/*
+ * Source Panel
+ */
+#hotui_source_panel {
+    bottom: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 0;
+}
+
+#hotui_source_panel > .CodeMirror {
+    height: 100%;
+    width: 450px;
+}
+
+#hotui_source_panel > .hb_side_buttons {
+    left: -5px;
+    position: absolute;
+    top: 5px;
+}
+
+#hotui_source_panel > .hb_side_buttons > * {
+    background-color: #3480c2;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    padding: 2px 8px;
+    position: absolute;
+    right: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#hotui_source_panel > .hb_side_buttons > .hb_save,
+#hotui_source_panel > .hb_side_buttons > .hb_validate,
+#hotui_source_panel > .hb_side_buttons > .hb_download {
+    display: none;
+}
+
+#hotui_source_panel > .hb_side_buttons > .hb_save {
+    top: 27px;
+}
+
+#hotui_source_panel > .hb_side_buttons > .hb_validate {
+    top: 54px;
+}
+
+#hotui_source_panel > .hb_side_buttons > .hb_download {
+    top: 81px;
+}
+
+/*
+ * Form Elements
+ */
 
 .Container {
     border-left: solid 1px #b0b0b0;
@@ -429,68 +428,6 @@
 
 #hotui_side_panel .invalid {
     color: red;
-}
-
-#hotui_json_box {
-    /* just a mess of properties, needs refactoring */
-    cursor: default;
-    background-color: white;
-    position: absolute;
-    right:0;
-    top:0;
-    width: 700px;
-    height: 500px;
-    border: 1px solid black;
-}
-
-#hotui_json_box .json {
-    width: 100%;
-    height: 100%;
-    white-space: nowrap;
-    overflow: auto;
-    font-family:monospace;
-    font-size:16px;
-    line-height:20px;
-    padding:5px;
-    padding-top: 20px;
-    text-align: left;
-}
-
-#hotui_json_box .validate_button {
-    position: absolute;
-    cursor: pointer;
-    background-color: aqua;
-    text-align: center;
-    top: 0;
-    right: 155px;
-    height: 20px;
-    font-size: 16px;
-    line-height: 20px;
-}
-
-#hotui_json_box .update_button {
-    position: absolute;
-    cursor: pointer;
-    background-color: lime;
-    text-align: center;
-    top: 0;
-    right: 25px;
-    height: 20px;
-    font-size: 16px;
-    line-height: 20px;
-}
-
-#hotui_json_box .json_close_button {
-    position: absolute;
-    cursor: pointer;
-    background-color: red;
-    text-align: center;
-    top: 0;
-    right: 0;
-    width: 20px;
-    height: 20px;
-    font-size: 16px;
-    line-height: 20px;
 }
 
 /*

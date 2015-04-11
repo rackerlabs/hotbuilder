@@ -238,10 +238,12 @@ HotUI.Topology = BaseObject.extend({
                 _onResourceClickCallback: function () {},
                 _nodes: []
             }),
-            centerX = 3 * self._width / 4,
+            centerX = self._width / 2,
             centerY = self._height / 2,
+            scale = 1.5,
             zoom = d3.behavior.zoom()
                               .translate([centerX, centerY])
+                              .scale(scale)
                               .on("zoom", function () { self._onZoom(); });
 
         self._svg = d3.select($container[0]).append("svg")
@@ -249,9 +251,10 @@ HotUI.Topology = BaseObject.extend({
                 .attr("height", self._height)
                 .call(zoom);
 
-        self._topG = self._svg.append("g")
-                         .attr('transform', 'translate(' + centerX + ',' +
-                                                           centerY + ')');
+        self._topG = self._svg.append("g").attr(
+                        'transform', Snippy('translate(${x},${y})scale(${s})')({
+                                        x: centerX, y: centerY, s: scale
+                                     }));
 
         self._force = d3.layout.force()
                                .size([self._width, self._height])
