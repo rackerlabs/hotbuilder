@@ -49,7 +49,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             properties = {};
         }
 
-        properties.data = resource;
+        properties.resource = resource;
         properties.svg = {};
 
         return this.extend(properties);
@@ -167,10 +167,10 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             $textContainer = $label.selectAll('.text_container');
 
         $g.selectAll(".resource_name")
-            .text(this.data.getID());
+            .text(this.resource.getID());
 
         $g.selectAll(".resource_type")
-            .text(this.data.getType().split("::")[2]);
+            .text(this.resource.getType().split("::")[2]);
 
         window.setTimeout(function () {
             var textBBox = $textContainer[0][0].getBBox();
@@ -276,7 +276,7 @@ HotUI.Topology = BaseObject.extend({
         $(window).unload(function () {
             var positions = {};
             self._nodes.forEach(function (n) {
-                positions[n.data.getID()] = {
+                positions[n.resource.getID()] = {
                     x: n.x,
                     y: n.y
                 };
@@ -338,7 +338,7 @@ HotUI.Topology = BaseObject.extend({
                 })
                 .on("click", function (d) {
                     if (!d3.event.defaultPrevented) {
-                        self._onResourceClickCallback(d.data);
+                        self._onResourceClickCallback(d.resource);
                     }
                 })
                 .on("mouseenter", function () {
@@ -426,7 +426,7 @@ HotUI.Topology = BaseObject.extend({
                                  (y - n.y) * (y - n.y));
 
             if (dist <= 15 && n !== srcNode) {
-                self._onLinkCreatorCreate(srcNode.data, n.data);
+                self._onLinkCreatorCreate(srcNode.resource, n.resource);
             }
         });
     },
@@ -485,7 +485,7 @@ HotUI.Topology = BaseObject.extend({
     },
     _getNodeMap: function () {
         return this._nodes.reduce(function (mapOut, curNode) {
-                mapOut[curNode.data.getID()] = curNode;
+                mapOut[curNode.resource.getID()] = curNode;
                 return mapOut;
             }, {});
     },
@@ -500,7 +500,7 @@ HotUI.Topology = BaseObject.extend({
                 newNode;
 
             if (oldNode) {
-                oldNode.data = resource;
+                oldNode.resource = resource;
                 return oldNode;
             } else if (self._nextResourcePt) {
                 newNode = HotUI.TopologyNode.factory(resource, {
@@ -532,7 +532,7 @@ HotUI.Topology = BaseObject.extend({
                     dy = droppedNode.y - node.y;
 
                     if (dx * dx + dy * dy < 225) { // Within 15px (sqrt 225)
-                        node.data.connectTo(droppedNode.data);
+                        node.resource.connectTo(droppedNode.resource);
                     }
                 }
             });
@@ -542,7 +542,7 @@ HotUI.Topology = BaseObject.extend({
         var i;
 
         for (i = 0; i < this._nodes.length; i++) {
-            if (this._nodes[i].data === resource) {
+            if (this._nodes[i].resource === resource) {
                 return this._nodes[i];
             }
         }
@@ -566,7 +566,7 @@ HotUI.Topology = BaseObject.extend({
         }
 
         function addDependsOnLinks(nodeIn) {
-            nodeIn.data.get('depends_on').each(function (i, resourceID) {
+            nodeIn.resource.get('depends_on').each(function (i, resourceID) {
                 var target = self._resources.getByID(resourceID.get());
 
                 if (target) {
@@ -576,7 +576,7 @@ HotUI.Topology = BaseObject.extend({
         }
 
         function addAttributeLinks(nodeIn) {
-            nodeIn.data.getIntrinsicFunctions()
+            nodeIn.resource.getIntrinsicFunctions()
                   .filter(function (intrinsic) {
                       return intrinsic.instanceof(HotUI.HOT.GetAttribute);
                   })
@@ -587,7 +587,7 @@ HotUI.Topology = BaseObject.extend({
         }
 
         function addResourceLinks(nodeIn) {
-            nodeIn.data.getIntrinsicFunctions()
+            nodeIn.resource.getIntrinsicFunctions()
                   .filter(function (intrinsic) {
                       return intrinsic.instanceof(HotUI.HOT.GetResource);
                   })
@@ -613,8 +613,9 @@ HotUI.Topology = BaseObject.extend({
         return positions;
     },
     _updateNodeData: function () {
-        this._node = this._node.data(this._nodes,
-                                     function (d) { return d.data.getID(); });
+        this._node = this._node.data(this._nodes, function (d) {
+            return d.resource.getID();
+        });
     },
     _update: function () {
         this._updateNodeData();
