@@ -71,14 +71,6 @@ HotUI.SidePanel = BaseObject.extend({
             this._$content.append(content);
         }
     },
-    _getAttributesHTML: function (attributes) {
-        return attributes.sort(function (attr1, attr2) {
-                return attr1.getID().localeCompare(attr2.getID());
-            }).map(function (attribute) {
-                return '<b>' + attribute.getID() + '</b> - ' +
-                       attribute.get('description').get();
-            }).join("<br>");
-    },
     _setupDrag: function () {
         var self = this,
             $overlay = $("#hotui_overlay");
@@ -218,51 +210,10 @@ HotUI.SidePanel = BaseObject.extend({
             .call(this._drag);
     },
     showResource: function (resource) {
-        var self = this,
-            $html = $('<div></div>'),
-            backingType = resource.get('properties').getBackingType(),
-            attributesHTML = this._getAttributesHTML(resource.getAttributes()),
-            resourceControl = HotUI.FormControl(resource, {
-                'template': this._template
-            }),
-            $resourceID,
-            $deleteResourceButton;
-
-        this._$navbar.children('.hotui_nav_button.active')
-                     .removeClass("active");
-
-        $html.append($(Snippy(
-            '<h2><input class="resource_id" type="text" value="${id}"></h2>' +
-            '<br><a href="${docsURL}" target="_blank">Docs</a>' +
-            '<br><a class="delete_resource">Delete</a>')({
-                id: resource.getID(),
-                docsURL: resource.getDocsLink()
-            })));
-        $html.append('<hr>');
-        $html.append('Attributes:<br>' + (attributesHTML || 'None<br>'));
-        $html.append('<hr>');
-        $html.append(resourceControl.html());
-
-        this.displayContent($html);
-
-        $resourceID = this._$content.find('.resource_id');
-        $deleteResourceButton = this._$content.find('.delete_resource');
-
-        $resourceID.on('blur', function () {
-            resource.setID($resourceID.val());
-        });
-
-        $deleteResourceButton.click(function () {
-            var i,
-                resources = self._template.get('resources');
-
-            for (i = 0; i < resources.length(); i++) {
-                if (resources.get(i).getID() === resource.getID()) {
-                    resources.remove(i);
-                }
-            }
-            self.displayContent('');
-        });
+        var panel = HotUI.Panel.ResourceDetail.create(resource, this._template);
+        this.displayContent(panel.html());
+        this._$navbar.children('.nav_button.active')
+                     .removeClass('active');
     },
     showParameters: function () {
         this.displayContent([

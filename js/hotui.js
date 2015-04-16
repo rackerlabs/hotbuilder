@@ -97,8 +97,7 @@ $(function () {
         neededResources = [];
 
     function main() {
-        HotUI.HOT = createHOT(resourceTypeObj);
-        createFormElementClasses();
+        createHOT(resourceTypeObj);
         APP = HotUI.App.create();
     }
 
