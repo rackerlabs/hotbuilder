@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-HotUI.SidePanelController = BaseObject.extend({
+HotUI.SidePanel = BaseObject.extend({
     create: function ($container, $content, $closeButton) {
         var self = this.extend({
                 _isHidden: false,

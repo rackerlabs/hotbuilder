@@ -22,7 +22,7 @@ HotUI.App = BaseObject.extend({
                 '*': {'@class': HotUI.HOT.Template}
             }).create([{}])),
             topology = HotUI.Topology.create($("#hotui_topology")),
-            sidePanelController = HotUI.SidePanelController.create(
+            sidePanel = HotUI.SidePanel.create(
                                         $("#hotui_side_panel"),
                                         $("#hotui_side_panel_content"),
                                         $("#hotui_side_panel > .close_button")),
@@ -32,7 +32,7 @@ HotUI.App = BaseObject.extend({
 
         self._topology = topology;
         self._templates = templates;
-        self._sidePanelController = sidePanelController;
+        self._sidePanel = sidePanel;
         self._sourcePanel = sourcePanel;
 
         function template() {
@@ -51,13 +51,13 @@ HotUI.App = BaseObject.extend({
         }
 
         function onResourceClick(resource) {
-            sidePanelController.showResource(resource);
+            sidePanel.showResource(resource);
         }
 
         templates.on('change', function (type, index, newTemp, oldTemp) {
             if (type === 'set' && index === 0) {
                 topology.setData(newTemp.get('resources'));
-                sidePanelController.setTemplate(newTemp);
+                sidePanel.setTemplate(newTemp);
             }
         });
 
@@ -67,19 +67,19 @@ HotUI.App = BaseObject.extend({
 
         // initialization
         templates.set(0, JSON.parse(localStorage.getItem('template')));
-        sidePanelController.setOnResourceDrop(addResource);
-        sidePanelController.showAddResourcePanel();
+        sidePanel.setOnResourceDrop(addResource);
+        sidePanel.showAddResourcePanel();
 
         topology.setData(template().get('resources'));
         topology.setOnResourceClick(onResourceClick);
         topology.setOnLinkCreatorCreate(function (source, target) {
-            sidePanelController.showLinkCreatePanel(source, target);
+            sidePanel.showLinkCreatePanel(source, target);
         });
 
         return self;
     },
     getSidePanel: function () {
-        return this._sidePanelController;
+        return this._sidePanel;
     },
     getSourcePanel: function () {
         return this._sourcePanel;
