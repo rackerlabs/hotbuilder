@@ -54,7 +54,10 @@
  * Topology
  */
 #hotui_topology {
+    /* http://colorschemedesigner.com/csd-3.5/#3B22kcc--6q6q */
+    background: #a6d0ff url(/static/hotui/img/hexagons.svg) repeat;
     bottom: 0;
+    cursor: move;
     left: 400px;
     position:absolute;
     right: 0;
@@ -65,11 +68,22 @@
 }
 
 .node text {
-    font-size: 6px;
+    font-size: 7px;
+}
+
+.node > .hb_bg {
+    fill: white;
+    stroke: #3480c2;
+    stroke-width: 2px;
+}
+
+.node .resource_name {
+    font-size: 9px;
+    font-weight: bold;
 }
 
 .link {
-    stroke-width: 1px;
+    stroke-width: 2px;
 }
 
 .link.depends_on {
@@ -85,11 +99,6 @@
 .link.resource {
     stroke: red;
     fill: red;
-}
-
-.label > .background {
-    fill: rgba(255, 255, 255, 0.9);
-    stroke: rgba(52, 128, 194, 0.4); /* === #3480C2 */
 }
 
 /*

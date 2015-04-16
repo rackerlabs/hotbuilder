@@ -55,10 +55,24 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         return this.extend(properties);
     },
     _iconBaseURL: '/static/hotui/img/',
+    h: 110,
+    w: 80,
+    padding: 10,
     focus: {x: 0, y: 0},
     focusForce: {x: 0.5, y: 0.5},
     getIconURL: function () {
         return this._iconBaseURL + this.iconFile;
+    },
+    setNameOnElement: function ($el) {
+        var name = this.resource.getID(),
+            i = Math.floor(name.length / 2);
+
+        $el.textContent = name;
+
+        while ($el.getComputedTextLength() > this.w - 5) {
+            $el.textContent = name.slice(0, i) + '...' + name.slice(-i);
+            i--;
+        }
     },
     iconFile: 'icon-orchestration.svg',
     setNode: function ($g) {
@@ -67,6 +81,8 @@ HotUI.TopologyNode.Base = BaseObject.extend({
     },
     decorateNode: function () {
         var self = this,
+            resImgPad = 8,
+            resImgWidth = self.w - resImgPad * 2,
             $g = this.svg.node,
             $label,
             $textContainer,
@@ -79,83 +95,81 @@ HotUI.TopologyNode.Base = BaseObject.extend({
                 d3.event.sourceEvent.stopPropagation();
             })
             .on('drag', function () {
-                $linkCreator.attr('cx', d3.event.x)
-                            .attr('cy', d3.event.y);
-                $linkCreatorLine.attr('x2', d3.event.x)
-                                .attr('y2', d3.event.y);
+                $linkCreator.attr({cx: d3.event.x, cy: d3.event.y});
+                $linkCreatorLine.attr({x2: d3.event.x, y2: d3.event.y});
             })
             .on('dragend', function (d) {
                 var creatorX = +$linkCreator.attr('cx'),
                     creatorY = +$linkCreator.attr('cy');
 
-                $linkCreator.attr('cx', '7')
-                            .attr('cy', '10');
-                $linkCreatorLine.attr('x2', '0')
-                                .attr('y2', '0');
-                self._onLinkCreatorDrop(creatorX + d.x,
-                                        creatorY + d.y,
-                                        self);
+                $linkCreator.attr({cx: self.w / 2, cy: self.h / 2});
+                $linkCreatorLine.attr({x2: 0, y2: 0});
+                self._onLinkCreatorDrop(creatorX + d.x, creatorY + d.y, self);
             });
 
-        $linkCreatorLine = $g.append('line')
-            .attr('x1', '0')
-            .attr('y1', '0')
-            .attr('x2', '0')
-            .attr('y2', '0')
-            .attr('stroke-width', '1px')
-            .attr('stroke', 'grey');
+        $linkCreatorLine = $g.append('line').attr({
+            x1: 0,
+            x2: 0,
+            y1: 0,
+            y2: 0,
+            stroke: '#3480c2',
+            'stroke-width': '2px'
+        });
 
-        $linkCreator = $g.append('circle')
-            .attr('r', '5')
-            .attr('cx', '7')
-            .attr('cy', '10')
-            .attr('fill', 'white')
-            .attr('stroke', '#3480C2')
-            .on('mouseenter', function () {
-                $linkCreator.attr('fill', '#3480C2');
-            })
-            .on('mouseleave', function () {
-                $linkCreator.attr('fill', 'white');
-            })
-            .call(dragLinkCreator);
+        $g.append('rect').attr({
+            'class': 'hb_bg',
+            height: this.h,
+            rx: '5',
+            width: this.w,
+            x: -this.w / 2,
+            y: -this.h / 2
+        });
+
+        $g.append('image').attr({
+            'class': 'resource_image',
+            height: resImgWidth,
+            width: resImgWidth,
+            x: -resImgWidth / 2,
+            y: -this.h/2 + resImgPad,
+            'xlink:href': this.getIconURL()
+        });
 
         $label = $g.append('g')
                    .attr('class', 'label')
-                   .attr('transform', 'translate(16, 0)');
 
         $textContainer = $label.append('g')
                                .attr('class', 'text_container');
 
-        $g.append('circle')
-            .attr('r', '14')
-            .attr('cx', '0')
-            .attr('cy', '0')
-            .attr('fill', 'white')
-            .attr('stroke', '#3480C2')
-            .attr('stroke-width', '1');
+        $linkCreator =
+            $g.append('circle').attr({
+                    r: 5,
+                    cx: self.w / 2,
+                    cy: self.h / 2,
+                    fill: 'white',
+                    stroke: '#3480C2',
+                    'stroke-width': '2px'
+                })
+                .on('mouseenter', function () {
+                    $linkCreator.attr('fill', '#3480C2');
+                })
+                .on('mouseleave', function () {
+                    $linkCreator.attr('fill', 'white');
+                })
+                .call(dragLinkCreator);
 
-        $g.append('image')
-            .attr('class', 'resource_image')
-            .attr('height', '20')
-            .attr('width', '20')
-            .attr('x', '-10')
-            .attr('y', '-10')
-            .attr('xlink:href', this.getIconURL());
+        $textContainer.append('text').attr({
+            'class': 'resource_name',
+            'text-anchor': 'middle',
+            x: 0,
+            y: 35
+        });
 
-        $label.insert('rect', '.text_container')
-              .attr('class', 'background')
-              .attr('rx', 5)
-              .attr('ry', 5);
-
-        $textContainer.append('text')
-                       .attr('class', 'resource_name')
-                       .attr('x', 0)
-                       .attr('y', -2);
-
-        $textContainer.append('text')
-                       .attr('class', 'resource_type')
-                       .attr('x', 0)
-                       .attr('y', 5);
+        $textContainer.append('text').attr({
+            'class': 'resource_type',
+            'text-anchor': 'middle',
+            x: 0,
+            y: 45
+        });
 
         this.updateNode();
     },
@@ -163,22 +177,12 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         var $g = this.svg.node,
             pad = 5,
             $label = $g.selectAll('.label'),
-            $labelBg = $label.selectAll('.background'),
             $textContainer = $label.selectAll('.text_container');
 
-        $g.selectAll(".resource_name")
-            .text(this.resource.getID());
+        this.setNameOnElement($g.selectAll('.resource_name')[0][0]);
 
-        $g.selectAll(".resource_type")
-            .text(this.resource.getType().split("::")[2]);
-
-        window.setTimeout(function () {
-            var textBBox = $textContainer[0][0].getBBox();
-            $labelBg.attr('x', textBBox.x - pad)
-                     .attr('y', textBBox.y - pad)
-                     .attr('width', textBBox.width + 2 * pad)
-                     .attr('height', textBBox.height + 2 * pad);
-        }, 0);
+        $g.selectAll('.resource_type')
+            .text(this.resource.getType().split('::')[2]);
     },
     setOnLinkCreatorDrop: function (callback) {
         this._onLinkCreatorDrop = callback;
@@ -188,23 +192,25 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
 // Represents a main infrastructure component
 HotUI.TopologyNode.Core = HotUI.TopologyNode.Base.extend({
-    charge: -400,
-    focusForce: {x: 0.05, y: 0.35}
+    charge: -800,
+    fixToAxis: 'x',
+    focusForce: {x: 0.05, y: 1}
 });
 
 HotUI.TopologyNode.Helper = HotUI.TopologyNode.Base.extend({
     charge: -200,
+    fixToAxis: 'y',
     focus: {x: -300, y: 0},
     focusForce: {x: 0.05, y: 0.01}
 });
 
 HotUI.TopologyNode.DNS = HotUI.TopologyNode.Core.extend({
-    focus: {x: 0, y: -140},
+    focus: {x: 0, y: -300},
     iconFile: 'icon-dns.svg'
 });
 
 HotUI.TopologyNode.LoadBalancer = HotUI.TopologyNode.Core.extend({
-    focus: {x: 0, y: -70},
+    focus: {x: 0, y: -150},
     iconFile: 'icon-load-balancers.svg'
 });
 
@@ -214,7 +220,7 @@ HotUI.TopologyNode.Server = HotUI.TopologyNode.Core.extend({
 });
 
 HotUI.TopologyNode.Database = HotUI.TopologyNode.Core.extend({
-    focus: {x: 0, y: 70},
+    focus: {x: 0, y: 150},
     iconFile: 'icon-block-storage.svg'
 });
 
@@ -233,6 +239,7 @@ HotUI.TopologyNode.Key = HotUI.TopologyNode.Helper.extend({
 HotUI.Topology = BaseObject.extend({
     create: function ($container) {
         var self = this.extend({
+                _$container: $container,
                 _width: $container.width(),
                 _height: $container.height(),
                 _onResourceClickCallback: function () {},
@@ -240,36 +247,33 @@ HotUI.Topology = BaseObject.extend({
             }),
             centerX = self._width / 2,
             centerY = self._height / 2,
-            scale = 1.5,
+            scale = 1,
             zoom = d3.behavior.zoom()
-                              .translate([centerX, centerY])
-                              .scale(scale)
-                              .on("zoom", function () { self._onZoom(); });
+                     .translate([centerX, centerY])
+                     .scale(scale)
+                     .scaleExtent([0.3, 5])
+                     .on('zoom', function () {
+                         self._onZoom(d3.event.translate, d3.event.scale);
+                     });
 
-        self._svg = d3.select($container[0]).append("svg")
-                .attr("width", self._width)
-                .attr("height", self._height)
-                .call(zoom);
+        self._svg = d3.select($container[0]).append('svg').attr({
+                width: self._width,
+                height: self._height
+            })
+            .call(zoom);
 
-        self._topG = self._svg.append("g").attr(
-                        'transform', Snippy('translate(${x},${y})scale(${s})')({
-                                        x: centerX, y: centerY, s: scale
-                                     }));
+        self._topG = self._svg.append('g')
+
+        self._onZoom([centerX, centerY], scale);
 
         self._force = d3.layout.force()
                                .size([self._width, self._height])
-                               .on("tick", function (e) { self._tick(e); })
+                               .on('tick', function (e) { self._tick(e); })
                                .start();
 
-        self._node = self._topG.selectAll(".node");
-        self._link = self._topG.selectAll(".link");
+        self._node = self._topG.selectAll('.node');
+        self._link = self._topG.selectAll('.link');
         self._updatedResourceCB = function () { self.updatedResource(); };
-
-        self._topG.append('circle')
-             .attr('r', '1')
-             .attr('fill', '#808080')
-             .attr('cx', '0')
-             .attr('cy', '0');
 
         self.setTieredLayout();
 
@@ -305,18 +309,18 @@ HotUI.Topology = BaseObject.extend({
              .linkDistance(function (d) {
                  if (d.source.instanceof(HotUI.TopologyNode.Core) &&
                          d.target.instanceof(HotUI.TopologyNode.Core)) {
-                     return 70;
+                     return 200;
                  } else if (d.source.instanceof(HotUI.TopologyNode.Helper) &&
                          d.target.instanceof(HotUI.TopologyNode.Helper)) {
-                     return 70;
-                 } else {
                      return 200;
+                 } else {
+                     return 300;
                  }
              })
              .linkStrength(function (d) {
                  return d.source.instanceof(HotUI.TopologyNode.Core) &&
                         d.target.instanceof(HotUI.TopologyNode.Core) ?
-                            0.5 :
+                            0.001 :
                         d.source.instanceof(HotUI.TopologyNode.Helper) &&
                         d.target.instanceof(HotUI.TopologyNode.Helper) ?
                             0.5 :
@@ -328,20 +332,20 @@ HotUI.Topology = BaseObject.extend({
     },
     _decorateNodes: function (nodesIn) {
         var self = this,
-            newG = nodesIn.append("g")
-                .attr("class", "node")
-                .attr("cx", function (d) { return d.x; })
-                .attr("cy", function (d) { return d.y; })
+            newG = nodesIn.append('g')
+                .attr('class', 'node')
+                .attr('cx', function (d) { return d.x; })
+                .attr('cy', function (d) { return d.y; })
                 .call(this._force.drag)
-                .on("mousedown", function () {
+                .on('mousedown', function () {
                     d3.event.stopPropagation();
                 })
-                .on("click", function (d) {
+                .on('click', function (d) {
                     if (!d3.event.defaultPrevented) {
                         self._onResourceClickCallback(d.resource);
                     }
                 })
-                .on("mouseenter", function () {
+                .on('mouseenter', function () {
                     this.parentNode.appendChild(this);
                 });
 
@@ -353,7 +357,7 @@ HotUI.Topology = BaseObject.extend({
         });
     },
     _updateNodes: function (nodesIn) {
-        d3.selection(nodesIn).selectAll("g.node").each(function (d) {
+        d3.selection(nodesIn).selectAll('g.node').each(function (d) {
             d.updateNode();
         });
     },
@@ -363,18 +367,74 @@ HotUI.Topology = BaseObject.extend({
             linksLine = linksG.append('polyline'),
             linksArrow = linksG.append('path');
 
-        linksG.attr("class", function (d) {
-            return "link " + d.type;
+        linksG.attr('class', function (d) {
+            return 'link ' + d.type;
         });
 
         linksArrow.attr('d', 'M3,0 L-3,-2 L-3,2 Z');
     },
-    _onZoom: function () {
-        this._topG.attr("transform", "translate(" + d3.event.translate + ")" +
-                        "scale(" + d3.event.scale + ")");
+    _onZoom: function (translate, scale) {
+        this._topG.attr('transform', Snippy(
+            'translate(${0})scale(${1})')([translate, scale]));
+
+        this._$container.css({
+            backgroundSize: 50 * scale,
+            backgroundPosition: Snippy('${0}px ${1}px')(translate)
+        });
 
         // updates label backgrounds because text changes size
         this._nodes.forEach(function (n) { n.updateNode(); });
+    },
+    _collide: function (nodes, alpha) {
+        var quadtree = d3.geom.quadtree(nodes),
+            maxH = Math.max.apply(null, nodes.map(function (d) {
+                return d.h;
+            })),
+            maxW = Math.max.apply(null, nodes.map(function (d) {
+                return d.w;
+            })),
+            maxPadding = Math.max.apply(null, nodes.map(function (d) {
+                return d.padding;
+            }));
+
+        return function (d) {
+            var xMin = (d.w + maxW) / 2 + maxPadding;
+                yMin = (d.h + maxH) / 2 + maxPadding;
+                nx1 = d.x - xMin,
+                nx2 = d.x + xMin,
+                ny1 = d.y - yMin,
+                ny2 = d.y + yMin;
+
+            quadtree.visit(function (quad, x1, y1, x2, y2) {
+                if (quad.point && quad.point !== d) {
+                    var pad = Math.max(d.padding, quad.point.padding),
+                        xDelta = d.x - quad.point.x,
+                        yDelta = d.y - quad.point.y,
+                        xDist = Math.abs(xDelta),
+                        yDist = Math.abs(yDelta),
+                        xMin = (d.w + quad.point.w) / 2 + pad,
+                        yMin = (d.h + quad.point.h) / 2 + pad,
+                        xOverlapRatio,
+                        yOverlapRatio;
+
+                    if (xDist < xMin && yDist < yMin) { // Collision detected
+                        xOverlapRatio = (xMin - xDist) / xDist;
+                        yOverlapRatio = (yMin - yDist) / yDist;
+
+                        if (xOverlapRatio < yOverlapRatio) {
+                            xDelta *= xOverlapRatio * alpha;
+                            d.x += xDelta;
+                            quad.point.x -= xDelta;
+                        } else {
+                            yDelta *= yOverlapRatio * alpha;
+                            d.y += yDelta;
+                            quad.point.y -= yDelta;
+                        }
+                    }
+                }
+                return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+            });
+        };
     },
     _tick: function (e) {
         this._layoutSpecificTick(e);
@@ -385,13 +445,15 @@ HotUI.Topology = BaseObject.extend({
             return angle * (180 / Math.PI);
         }
 
-        this._node.attr("transform", function (d) {
-            return "translate(" + d.x + ", " + d.y + ")";
+        this._node.attr('transform', function (d) {
+            return 'translate(' + d.x + ', ' + d.y + ')';
         });
 
         this._link.attr('transform', function (d) {
-            return 'translate(' + (d.source.x + d.target.x) / 2 + ', ' +
-                (d.source.y + d.target.y) / 2 + ')';
+            return Snippy('translate(${0}, ${1})')([
+                (d.source.x + d.target.x) / 2,
+                (d.source.y + d.target.y) / 2
+            ]);
         });
 
         this._link.selectAll('polyline')
@@ -406,26 +468,37 @@ HotUI.Topology = BaseObject.extend({
             });
 
         this._link.selectAll('path').attr('transform', function (d) {
-            return 'rotate(' + toDegrees(Math.atan2(d.target.y - d.source.y,
-                                             d.target.x - d.source.x)) + ')';
+            return Snippy('rotate(${0})')([toDegrees(Math.atan2(
+                d.target.y - d.source.y, d.target.x - d.source.x))]);
         });
     },
     _tieredTick: function (e) {
         this._nodes.forEach(function (d) {
-            // light gravity towards x = 0
             d.x += (d.focus.x - d.x) * e.alpha * d.focusForce.x;
             d.y += (d.focus.y - d.y) * e.alpha * d.focusForce.y;
         });
+
+        this._nodes.forEach(function (d) {
+            var scale = 1 - Math.min(1, e.alpha * 10),
+                coord;
+
+            if ('fixToAxis' in d) {
+                coord = d.fixToAxis === 'x' ? 'y' : 'x';
+                d[coord] += (d.focus[coord] - d[coord]) * scale * scale * scale;
+            }
+        });
+
+        this._nodes.forEach(this._collide(this._nodes, 0.5));
     },
     _webTick: function () {},
     _onLinkCreatorDrop: function (x, y, srcNode) {
         var self = this;
 
         this._nodes.forEach(function (n) {
-            var dist = Math.sqrt((x - n.x) * (x - n.x) +
-                                 (y - n.y) * (y - n.y));
+            var xDist = Math.abs(x - n.x),
+                yDist = Math.abs(y - n.y);
 
-            if (dist <= 15 && n !== srcNode) {
+            if (xDist < n.w / 2 && yDist < n.h / 2 && n !== srcNode) {
                 self._onLinkCreatorCreate(srcNode.resource, n.resource);
             }
         });
@@ -560,7 +633,7 @@ HotUI.Topology = BaseObject.extend({
                         'type': type
                     });
                 } else {
-                    console.error("else statement hit when adding links");
+                    console.error('else statement hit when adding links');
                 }
             }
         }
@@ -570,7 +643,7 @@ HotUI.Topology = BaseObject.extend({
                 var target = self._resources.getByID(resourceID.get());
 
                 if (target) {
-                    addLink(nodeIn, target, "depends_on");
+                    addLink(nodeIn, target, 'depends_on');
                 }
             });
         }
@@ -582,7 +655,7 @@ HotUI.Topology = BaseObject.extend({
                   })
                   .forEach(function (value) {
                       addLink(nodeIn, value.get('get_attr').get('resource'),
-                              "attribute");
+                              'attribute');
                   });
         }
 
@@ -593,7 +666,7 @@ HotUI.Topology = BaseObject.extend({
                   })
                   .forEach(function (value) {
                       addLink(nodeIn, value.get('get_resource'),
-                              "resource");
+                              'resource');
                   });
         }
 
