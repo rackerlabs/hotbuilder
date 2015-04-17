@@ -14,7 +14,7 @@
 
 HotUI.Panel = {};
 
-HotUI.Panel.Base = HotUI.BaseControl.extend({
+HotUI.Panel.Base = HotUI.UI.Base.extend({
     create: function () {
         return this.extend({});
     }

@@ -233,10 +233,10 @@ HotUI.SidePanel = BaseObject.extend({
     },
     showTemplateOptions: function () {
         var $html = $('<div></div>'),
-            versionControl = HotUI.StringControl.create(
+            versionControl = HotUI.UI.String.create(
                                  this._template.get('heat_template_version'),
                                  'Heat Template Version'),
-            descriptionControl = HotUI.StringControl.create(
+            descriptionControl = HotUI.UI.String.create(
                                      this._template.get('description'),
                                      'Description');
 
@@ -251,19 +251,19 @@ HotUI.SidePanel = BaseObject.extend({
         var getAttribute = HotUI.HOT.GetAttribute.create(),
             value = getAttribute.get('get_attr').get('value'),
             $html = $('<div></div>'),
-            $dependencyTypeSelector = HotUI.Selector.create(
+            $dependencyTypeSelector = HotUI.UI.Selector.create(
                 ['General', 'Resource', 'Attribute']),
-            $sourceBox = HotUI.Snippet.create(
+            $sourceBox = HotUI.UI.Snippet.create(
                 '<div data-bind="visible: showProps()"></div>',
                 {showProps: showProps}),
-            $destBox = HotUI.Snippet.create(
+            $destBox = HotUI.UI.Snippet.create(
                 '<div data-bind="visible: showAttrs()"></div>',
                 {showAttrs: showAttrs}),
             $createButton =
                 $('<div class="create_dependency_button">Create</div>'),
-            $attribute = HotUI.ResourceAttributeSelector.create(targetResource),
-            $value = HotUI.SchemalessContainerControl.create(value),
-            $selector = HotUI.ResourcePropertyWrapperSelector
+            $attribute = HotUI.UI.ResAttributeSelector.create(targetResource),
+            $value = HotUI.UI.SchemalessContainer.create(value),
+            $selector = HotUI.UI.ResourcePropertyWrapperSelector
                              .create(sourceResource);
 
         function showProps() {
