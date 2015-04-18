@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-    HotUI.UI = {};
+HotUI.UI = (function (hot) {
+    var ui = {};
 
-    HotUI.FormControl = function (data, parameters) {
+    ui.FormControl = function (data, parameters) {
         if (typeof parameters === 'undefined') {
             parameters = {
                 nestingLevel: 1,
@@ -26,20 +27,20 @@
             parameters.template = null;
         }
 
-        if (data.instanceof(HotUI.HOT.ResourcePropertyWrapper)) {
-            return HotUI.UI.ResourceProperty.create(data, parameters);
-        } else if (data.instanceof(HotUI.HOT.IntrinsicFunction)) {
-            return HotUI.UI.IntrinsicFunction.create(data, parameters);
-        } else if (data.instanceof(HotUI.HOT.ParameterConstraint)) {
-            return HotUI.UI.ParameterConstraint.create(data, parameters);
-        } else if (data.instanceof(HotUI.HOT.Primitive)) {
-            return HotUI.UI.PrimitiveSelector.create(data, parameters);
+        if (data.instanceof(hot.ResourcePropertyWrapper)) {
+            return ui.ResourceProperty.create(data, parameters);
+        } else if (data.instanceof(hot.IntrinsicFunction)) {
+            return ui.IntrinsicFunction.create(data, parameters);
+        } else if (data.instanceof(hot.ParameterConstraint)) {
+            return ui.ParameterConstraint.create(data, parameters);
+        } else if (data.instanceof(hot.Primitive)) {
+            return ui.PrimitiveSelector.create(data, parameters);
         } else {
-            return HotUI.NormalFormControl(data, parameters);
+            return ui.NormalFormControl(data, parameters);
         }
     };
 
-    HotUI.NormalFormControl = function (data, parameters) {
+    ui.NormalFormControl = function (data, parameters) {
         var type = data.getPrimitiveType();
 
         if (typeof parameters === 'undefined') {
@@ -55,30 +56,30 @@
 
         if (data.instanceof(Barricade.Container)) {
             if (data.instanceof(Barricade.Array)) {
-                return HotUI.UI.Array.create(data, parameters);
+                return ui.Array.create(data, parameters);
 
             } else if (data.instanceof(Barricade.MutableObject)) {
-                return HotUI.UI.MutableObject.create(data, parameters);
+                return ui.MutableObject.create(data, parameters);
 
             } else if (data.instanceof(Barricade.ImmutableObject)) {
-                return HotUI.UI.ImmutableObject.create(data, parameters);
+                return ui.ImmutableObject.create(data, parameters);
             }
         } else {
             if (type === String) {
-                return HotUI.UI.String.create(data);
+                return ui.String.create(data);
             } else if (type === Boolean) {
-                return HotUI.UI.Boolean.create(data);
+                return ui.Boolean.create(data);
             } else if (type === Array || type === Object) {
-                return HotUI.UI.SchemalessContainer.create(data);
+                return ui.SchemalessContainer.create(data);
             } else if (type === Number) {
-                return HotUI.UI.Number.create(data);
+                return ui.Number.create(data);
             }
         }
 
         throw new Error('no suitable control found');
     };
 
-    HotUI.UI.Base = BaseObject.extend({
+    ui.Base = BaseObject.extend({
         create: function () {
             return this.extend({});
         },
@@ -91,9 +92,9 @@
         }
     });
 
-    HotUI.UI.Snippet = HotUI.UI.Base.extend({
+    ui.Snippet = ui.Base.extend({
         create: function (htmlSnippet, observers) {
-            var self = HotUI.UI.Base.create.call(this);
+            var self = ui.Base.create.call(this);
             self._snippet = htmlSnippet;
             Object.keys(observers).forEach(function (key) {
                 self[key] = observers[key];
@@ -105,9 +106,9 @@
         }
     });
 
-    HotUI.UI.Selector = HotUI.UI.Base.extend({
+    ui.Selector = ui.Base.extend({
         create: function (options) {
-            var self = HotUI.UI.Base.create.call(this),
+            var self = ui.Base.create.call(this),
                 dummy = ko.observable();
 
             self.value = ko.computed({
@@ -132,9 +133,9 @@
         }
     });
 
-    HotUI.UI.MultiControl = HotUI.UI.Base.extend({
+    ui.MultiControl = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.Base.create.call(this, data, parameters);
+            var self = ui.Base.create.call(this, data, parameters);
 
             self._data = data;
             self._parameters = parameters;
@@ -177,12 +178,12 @@
                 for (i = 0; i < self._types.length; i++) {
                     if (data.instanceof(self._types[i].type)) {
                         // REFACTOR EVENTUALLY, ONLY .CREATE SHOULD BE USED
-                        if (typeof HotUI.UI[self._types[i].control] ===
+                        if (typeof ui[self._types[i].control] ===
                                 'function') {
-                            return HotUI.UI[self._types[i].control](data,
+                            return ui[self._types[i].control](data,
                                                                  parameters);
                         } else {
-                            return HotUI.UI[self._types[i].control]
+                            return ui[self._types[i].control]
                                        .create(data, parameters);
                         }
                     }
@@ -200,9 +201,9 @@
         }
     });
 
-    HotUI.UI.Primitive = HotUI.UI.Base.extend({
+    ui.Primitive = ui.Base.extend({
         create: function (data, writeFunc) {
-            var self = HotUI.UI.Base.create.call(this),
+            var self = ui.Base.create.call(this),
                 dummy = ko.observable(),
                 validDummy = ko.observable();
 
@@ -236,35 +237,35 @@
         }
     });
 
-    HotUI.UI.String = HotUI.UI.Primitive.extend({
+    ui.String = ui.Primitive.extend({
         create: function (data) {
-            var self = HotUI.UI.Primitive.create.call(this, data, data.set);
+            var self = ui.Primitive.create.call(this, data, data.set);
             return self;
         },
         _doHTML: function () {
-            return HotUI.UI.Primitive._doHTML.call(this)
+            return ui.Primitive._doHTML.call(this)
                 .append('<input class="StringControl" type="text" ' +
                         'data-bind="value: value">');
         }
     });
 
-    HotUI.UI.Number = HotUI.UI.Primitive.extend({
+    ui.Number = ui.Primitive.extend({
         create: function (data) {
-            var self = HotUI.UI.Primitive.create.call(this, data,
+            var self = ui.Primitive.create.call(this, data,
                                                           function (value) {
                                                               data.set(+value);
                                                           });
             return self;
         },
         _doHTML: function () {
-            return HotUI.UI.Primitive._doHTML.call(this)
+            return ui.Primitive._doHTML.call(this)
                 .append('<input type="number" data-bind="value: value">');
         }
     });
 
-    HotUI.UI.Boolean = HotUI.UI.Primitive.extend({
+    ui.Boolean = ui.Primitive.extend({
         create: function (data) {
-            var self = HotUI.UI.Primitive.create.call(this, data, data.set);
+            var self = ui.Primitive.create.call(this, data, data.set);
             return self;
         },
         _doHTML: function () {
@@ -273,20 +274,20 @@
         }
     });
 
-    HotUI.UI.Container = HotUI.UI.Base.extend({
+    ui.Container = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.Base.create.call(this);
+            var self = ui.Base.create.call(this);
 
             self.level = parameters.nestingLevel || 1;
             self._elements = ko.observableArray();
 
             function getUIElement(key, value, startCollapsed) {
-                var control = HotUI.FormControl(value, {
+                var control = ui.FormControl(value, {
                         'template': parameters.template,
                         'nestingLevel': self.level + 1,
                     });
                 
-                HotUI.UI.ContainerElement.call(control, value,
+                ui.ContainerElement.call(control, value,
                                                    self._getKey(key), data, 
                                                    startCollapsed);
                 return control;
@@ -348,7 +349,7 @@
         }
     });
 
-    HotUI.UI.ImmutableObject = HotUI.UI.Container.extend({
+    ui.ImmutableObject = ui.Container.extend({
         _doEach: function (data, func) {
             data.each(func, function (key1, key2) {
                 var val1 = data.get(key1),
@@ -365,18 +366,18 @@
         }
     });
 
-    HotUI.UI.MutableContainer = HotUI.UI.Container.extend({
+    ui.MutableContainer = ui.Container.extend({
         _doHTML: function () {
-            var $html = HotUI.UI.Container._doHTML.call(this);
+            var $html = ui.Container._doHTML.call(this);
 
             $html.append('<div data-bind="click: addElement"><a>Add</a></div>');
             return $html;
         }
     });
 
-    HotUI.UI.MutableObject = HotUI.UI.MutableContainer.extend({
+    ui.MutableObject = ui.MutableContainer.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.MutableContainer
+            var self = ui.MutableContainer
                             .create.call(this, data, parameters);
             self.addElement = function () {
                 data.push(undefined, {id: 'Untitled'});
@@ -385,9 +386,9 @@
         }
     });
 
-    HotUI.UI.Array = HotUI.UI.MutableContainer.extend({
+    ui.Array = ui.MutableContainer.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.MutableContainer
+            var self = ui.MutableContainer
                             .create.call(this, data, parameters);
             self.addElement = function () {
                 data.push();
@@ -399,7 +400,7 @@
         }
     });
 
-    HotUI.UI.ContainerElement = Barricade.Blueprint.create(
+    ui.ContainerElement = Barricade.Blueprint.create(
         function (data, label, _parent, startCollapsed) {
             var self = this,
                 oldDoHTML = this._doHTML,
@@ -474,7 +475,7 @@
                     $title.append('<span data-bind="text: id"></span>');
                 }
 
-                if (data.instanceof(HotUI.HOT.ResourcePropertyWrapper) &&
+                if (data.instanceof(hot.ResourcePropertyWrapper) &&
                         data.hasDescription()) {
                     $title.append('<sup><a href="#" ' +
                                   'title="' + data.getDescription() + '">' +
@@ -497,13 +498,13 @@
             }
 
             this.isValue = ko.computed(function () {
-                return data.instanceof(HotUI.HOT.ResourcePropertyWrapper);
+                return data.instanceof(hot.ResourcePropertyWrapper);
             });
 
             this.isFunctionType = ko.computed(function () {
                 isFunctionTypeDummy();
                 return self.isValue() && 
-                       data.getValue().instanceof(HotUI.HOT.IntrinsicFunction);
+                       data.getValue().instanceof(hot.IntrinsicFunction);
             });
 
             this.id = ko.computed({
@@ -581,11 +582,11 @@
             };
         });
 
-    HotUI.UI.ResourceProperty = HotUI.UI.Base.extend({
+    ui.ResourceProperty = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.Base.create.call(this, data, parameters),
+            var self = ui.Base.create.call(this, data, parameters),
                 $element,
-                innerControl = HotUI.FormControl(data.getValue(), parameters);
+                innerControl = ui.FormControl(data.getValue(), parameters);
 
             self._finishHTML = function () {
                 $element.append(innerControl.html());
@@ -599,7 +600,7 @@
             };
 
             data.on('change', function () {
-                innerControl = HotUI.FormControl(data.getValue(), parameters);
+                innerControl = ui.FormControl(data.getValue(), parameters);
                 $element.empty().append(innerControl.html());
             });
 
@@ -607,10 +608,10 @@
         }
     });
 
-    HotUI.UI.IntrinsicFunction = HotUI.UI.Base.extend({
+    ui.IntrinsicFunction = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.Base.create.call(this, data, parameters),
-                innerControl = HotUI.UI.FunctionSelect.create(data, parameters);
+            var self = ui.Base.create.call(this, data, parameters),
+                innerControl = ui.FunctionSelect.create(data, parameters);
 
             self._doHTML = function () {
                 var $innerControl = $('<div class="inner_control"></div>');
@@ -627,38 +628,38 @@
         }
     });
 
-    HotUI.UI.PrimitiveSelector = HotUI.UI.MultiControl.extend({
+    ui.PrimitiveSelector = ui.MultiControl.extend({
         _cssClass: 'PrimitiveSelector',
         _types: [
             {
                 label: 'Boolean',
-                type: HotUI.HOT.Primitive.bool,
+                type: hot.Primitive.bool,
                 control: 'Boolean'
             }, {
                 label: 'List',
-                type: HotUI.HOT.Primitive.array,
+                type: hot.Primitive.array,
                 control: 'Array'
             }, {
                 label: 'Map',
-                type: HotUI.HOT.Primitive.object,
+                type: hot.Primitive.object,
                 control: 'MutableObject'
             }, {
                 label: 'Number',
-                type: HotUI.HOT.Primitive.number,
+                type: hot.Primitive.number,
                 control: 'Number'
             }, {
                 label: 'String',
-                type: HotUI.HOT.Primitive.string,
+                type: hot.Primitive.string,
                 control: 'String'
             }
         ]
     });
 
-    HotUI.UI.SchemalessContainer = HotUI.UI.Base.extend({
+    ui.SchemalessContainer = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.UI.Base.create.call(this, data, parameters),
-                barricadeData = HotUI.HOT.Primitive.Factory(data.get()),
-                innerControl = HotUI.NormalFormControl(barricadeData,
+            var self = ui.Base.create.call(this, data, parameters),
+                barricadeData = hot.Primitive.Factory(data.get()),
+                innerControl = ui.NormalFormControl(barricadeData,
                                                        parameters);
 
             barricadeData.on('childChange', function () {
@@ -683,38 +684,38 @@
         }
     });
 
-    HotUI.UI.FunctionSelect = HotUI.UI.MultiControl.extend({
+    ui.FunctionSelect = ui.MultiControl.extend({
         _cssClass: 'FunctionSelect',
         _types: [
             {
                 label: 'Attribute',
-                type: HotUI.HOT.GetAttribute,
+                type: hot.GetAttribute,
                 control: 'GetAttribute'
             }, {
                 label: 'File',
-                type: HotUI.HOT.GetFile,
+                type: hot.GetFile,
                 control: 'GetFile'
             }, {
                 label: 'Parameter',
-                type: HotUI.HOT.GetParameter,
+                type: hot.GetParameter,
                 control: 'GetParameter'
             }, {
                 label: 'Resource',
-                type: HotUI.HOT.GetResource,
+                type: hot.GetResource,
                 control: 'GetResource'
             }, {
                 label: 'Resource Facade',
-                type: HotUI.HOT.ResourceFacade,
+                type: hot.ResourceFacade,
                 control: 'ResourceFacade'
             }, {
                 label: 'String Replace',
-                type: HotUI.HOT.StringReplace,
+                type: hot.StringReplace,
                 control: 'StringReplace'
             }
         ]
     });
 
-    HotUI.UI.GetAttribute = (function () {
+    ui.GetAttribute = (function () {
         function constructor(data, parameters) {
             if (!(this instanceof constructor)) {
                 return new constructor(data, parameters);
@@ -727,7 +728,7 @@
                 $attributeSelect,
                 $valueControl;
                 
-            resourceControl = HotUI.UI.ResourceSelect(
+            resourceControl = ui.ResourceSelect(
                 function () {
                     return attr.get('resource');
                 },
@@ -763,7 +764,7 @@
                     valueControl = null;
                     return '';
                 } else {
-                    valueControl = HotUI.UI.SchemalessContainer.create(
+                    valueControl = ui.SchemalessContainer.create(
                                         attr.get('value'));
                     return valueControl.html();
                 }
@@ -825,11 +826,11 @@
         return constructor;
     }());
 
-    HotUI.UI.GetFile = function (data, parameters) {
-        return HotUI.UI.String.create(data.get('get_file'), parameters);
+    ui.GetFile = function (data, parameters) {
+        return ui.String.create(data.get('get_file'), parameters);
     };
 
-    HotUI.UI.GetParameter = (function () {
+    ui.GetParameter = (function () {
         function constructor(data, parametersIn) {
             if (!(this instanceof constructor)) {
                 return new constructor(data, parametersIn);
@@ -897,8 +898,8 @@
         return constructor;
     }());
 
-    HotUI.UI.GetResource = function (data, parameters) {
-        return HotUI.UI.ResourceSelect(
+    ui.GetResource = function (data, parameters) {
+        return ui.ResourceSelect(
             function () {
                 return data.get('get_resource');
             },
@@ -908,7 +909,7 @@
             parameters.template.get('resources'));
     };
 
-    HotUI.UI.ResourceSelect = (function () {
+    ui.ResourceSelect = (function () {
         function constructor(getter, setter, resources) {
             if (!(this instanceof constructor)) {
                 return new constructor(getter, setter, resources);
@@ -975,45 +976,45 @@
         return constructor;
     }());
 
-    HotUI.UI.ResourceFacade = function (data, parameters) {
-        return HotUI.UI.String.create(
+    ui.ResourceFacade = function (data, parameters) {
+        return ui.String.create(
             data.get('resource_facade'), parameters);
     };
 
-    HotUI.UI.StringReplace = function (data, parameters) {
-        return HotUI.FormControl(data.get('str_replace'), parameters);
+    ui.StringReplace = function (data, parameters) {
+        return ui.FormControl(data.get('str_replace'), parameters);
     };
 
-    HotUI.UI.ParameterConstraint = HotUI.UI.MultiControl.extend({
+    ui.ParameterConstraint = ui.MultiControl.extend({
         _cssClass: 'ParameterConstraintControl',
         _types: [
             {
                 label: 'Length',
-                type: HotUI.HOT.LengthParameterConstraint,
+                type: hot.LengthParameterConstraint,
                 control: 'ImmutableObject'
             }, {
                 label: 'Range',
-                type: HotUI.HOT.RangeParameterConstraint,
+                type: hot.RangeParameterConstraint,
                 control: 'ImmutableObject'
             }, {
                 label: 'Allowed Values',
-                type: HotUI.HOT.AllowedValuesParameterConstraint,
+                type: hot.AllowedValuesParameterConstraint,
                 control: 'ImmutableObject'
             }, {
                 label: 'Allowed Pattern',
-                type: HotUI.HOT.AllowedPatternParameterConstraint,
+                type: hot.AllowedPatternParameterConstraint,
                 control: 'ImmutableObject'
             }, {
                 label: 'Custom Constraint',
-                type: HotUI.HOT.CustomParameterConstraint,
+                type: hot.CustomParameterConstraint,
                 control: 'ImmutableObject'
             }
         ]
     });
 
-    HotUI.UI.ResourcePropertyWrapperSelector = HotUI.UI.Base.extend({
+    ui.ResourcePropertyWrapperSelector = ui.Base.extend({
         create: function (resource) {
-            var self = HotUI.UI.Base.create.call(this);
+            var self = ui.Base.create.call(this);
             self._resource = resource;
             return self;
         },
@@ -1033,10 +1034,10 @@
                     var $label = $('<p>' + key + '<p>'),
                         $child = $('<div class="property_list"></div>')
                                      .append($label);
-                    if (value.instanceof(HotUI.HOT.ResourcePropertyWrapper) &&
+                    if (value.instanceof(hot.ResourcePropertyWrapper) &&
                             value.getValue().instanceof(Barricade.Container) &&
                             !value.getValue()
-                                  .instanceof(HotUI.HOT.IntrinsicFunction)) {
+                                  .instanceof(hot.IntrinsicFunction)) {
                         appendProperties($child, value.getValue());
                     } else if (value.instanceof(Barricade.Container)) {
                         $label.addClass('disabled');
@@ -1071,9 +1072,9 @@
         }
     });
 
-    HotUI.UI.ResAttributeSelector = HotUI.UI.Base.extend({
+    ui.ResAttributeSelector = ui.Base.extend({
         create: function (resource) {
-            var self = HotUI.UI.Base.create.call(this);
+            var self = ui.Base.create.call(this);
             self._resource = resource;
             return self;
         },
@@ -1091,3 +1092,6 @@
             return this._html.val();
         }
     });
+
+    return ui;
+}(HotUI.HOT));

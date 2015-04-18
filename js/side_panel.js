@@ -219,14 +219,14 @@ HotUI.SidePanel = BaseObject.extend({
         this.displayContent([
             '<h2>Parameters</h2>',
             '<br>',
-            HotUI.FormControl(this._template.get('parameters')).html(),
+            HotUI.UI.FormControl(this._template.get('parameters')).html(),
         ]);
     },
     showOutputs: function () {
         this.displayContent([
             '<h2>Outputs</h2>',
             '<br>',
-            HotUI.FormControl(this._template.get('outputs'), {
+            HotUI.UI.FormControl(this._template.get('outputs'), {
                 'template': this._template
             }).html()
         ]);

@@ -38,7 +38,7 @@ HotUI.Panel.ResourceDetail = HotUI.Panel.Base.extend({
             $html = this._$html,
             backingType = resource.get('properties').getBackingType(),
             attributesHTML = this._getAttributesHTML(resource.getAttributes()),
-            resourceControl = HotUI.FormControl(resource, {
+            resourceControl = HotUI.UI.FormControl(resource, {
                 'template': this._template
             }),
             $resourceID = $(Snippy(
