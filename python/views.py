@@ -34,8 +34,11 @@ class IndexView(TemplateView):
         resource_names = [t.resource_type for t in
                           hotui_api.resource_type_list(request, heat_endpoint)]
 
+        wp_single = hotui_api.get_template_from_url('https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-single/master/wordpress-single.yaml')
+
         context['region_value'] = region_value
         context['stack_endpoint'] = heat_endpoint
         context['resource_names'] = json.dumps(resource_names)
+        context['wordpress_single'] = hotui_api.yaml_to_json(wp_single)
                     
         return context
