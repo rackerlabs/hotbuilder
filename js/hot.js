@@ -17,6 +17,7 @@ HotUI.HOT = {};
 (function () {
     var hot = HotUI.HOT,
         elementSchema,
+        rpElementSchema,
         primitiveExtension = {
             create: function (json, parameters) {
                 var self = Barricade.Primitive.create.call(this, json,
@@ -40,7 +41,7 @@ HotUI.HOT = {};
         } else if (type === Number) {
             return hot.Primitive.number.create(json, parameters);
         } else if (type === Array) {
-            return hot.Primitive.Array.create(json, parameters);
+            return hot.Primitive.array.create(json, parameters);
         } else if (type === Object) {
             return hot.Primitive.object.create(json, parameters);
         }
@@ -57,7 +58,7 @@ HotUI.HOT = {};
                                                     {'@type': Boolean});
     hot.Primitive.number = Barricade.Primitive.extend(primitiveExtension,
                                                       {'@type': Number});
-    hot.Primitive.Array = Barricade.Array.extend({
+    hot.Primitive.array = Barricade.Array.extend({
         create: function (json, parameters) {
             var self = Barricade.Array.create.call(this, json, parameters);
             hot.Primitive.call(self);
@@ -186,6 +187,42 @@ HotUI.HOT = {};
         }
     });
 
+    // Extension for Resource properties that have schemaless containers
+    hot.Primitive.FactoryForResourceProperty = function (json, parameters) {
+        var type = Barricade.getType(json);
+
+        function getInnerClass() {
+            if (json === undefined || type === String) {
+                return hot.Primitive.string;
+            } else if (type === Boolean) {
+                return hot.Primitive.bool;
+            } else if (type === Number) {
+                return hot.Primitive.number;
+            } else if (type === Array) {
+                return hot.Primitive.arrayOfRP;
+            } else if (type === Object) {
+                return hot.Primitive.objectOfRP;
+            }
+        }
+
+        return hot.ResourcePropertyWrapper.extend({
+            _innerClass: getInnerClass()
+        }, {}).create(json, parameters);
+    };
+
+    rpElementSchema = {
+        '@class': hot.ResourcePropertyWrapper,
+        '@factory': hot.Primitive.FactoryForResourceProperty
+    };
+
+    hot.Primitive.arrayOfRP = hot.Primitive.array.extend({}, {
+        '*': rpElementSchema
+    });
+
+    hot.Primitive.objectOfRP = hot.Primitive.object.extend({}, {
+        '?': rpElementSchema
+    });
+
     function constraintFactory(constraintObj) {
         var types = {
                 'range': function (constraint) {
@@ -267,17 +304,10 @@ HotUI.HOT = {};
     hot.ResourcePropertyFactory = function (json, parameters) {
         if (!json.hasOwnProperty('schema')) {
             if (json.type === 'list') {
-                json.schema = {
-                    '*': {
-                        'type': 'string' // No '@'. This fixes missing
-                                         // resource_type_show schema
-                    }
-                };
+                return hot.ResourceProperty_list2.create(json, parameters);
+            } else if (json.type === 'map') {
+                return hot.ResourceProperty_map2.create(json, parameters);
             }
-        }
-
-        if (json.type === 'map' && !json.hasOwnProperty('schema')) {
-            return hot.ResourceProperty_map2.create(json, parameters)
         }
         return hot['ResourceProperty_' + json.type].create(json, parameters);
     };
@@ -306,9 +336,15 @@ HotUI.HOT = {};
                     this.get('schema').each(function (i, prop) {
                         schema[prop.getID()] = prop.getSchema();
                     });
+                } else {
+                    schema['?'] = rpElementSchema;
                 }
             } else if (schema['@type'] === Array) {
-                schema['*'] = this.get('schema').get('*').getSchema();
+                if (this.get('schema')) {
+                    schema['*'] = this.get('schema').get('*').getSchema();
+                } else {
+                    schema['*'] = rpElementSchema;
+                }
             }
 
             return {
@@ -349,6 +385,8 @@ HotUI.HOT = {};
         }
     });
 
+    hot.ResourceProperty_list2 = hot.ResourceProperty.extend({}, {
+        'default': {'@type': Array}});
     hot.ResourceProperty_map2 = hot.ResourceProperty.extend({}, {
         'default': {'@type': Object}});
     hot.ResourceProperty_string = hot.ResourceProperty.extend({}, {
@@ -443,6 +481,11 @@ HotUI.HOT = {};
                 return hot.GetAttribute.create(json, parameters);
 
             } else if (json.hasOwnProperty('get_param')) {
+                if (json.get_param === 'OS::stack_name' ||
+                        json.get_param === 'OS::stack_id' ||
+                        json.get_param === 'OS::project_id') {
+                    return hot.GetParameterSpecial.create(json, parameters);
+                }
                 return hot.GetParameter.create(json, parameters);
 
             } else if (json.hasOwnProperty('get_file')) {
@@ -513,7 +556,7 @@ HotUI.HOT = {};
                 }
                 return [
                     resourceID,
-                    this.get('attribute')
+                    this.get('attribute').get()
                 ].concat(this.get('value').get());
             },
 
@@ -552,6 +595,11 @@ HotUI.HOT = {};
                 }
             }
         }
+    });
+
+    // For OS::stack_name, OS::stack_id, and OS::project_id pseudo parameters
+    hot.GetParameterSpecial = hot.IntrinsicFunction.extend({}, {
+        'get_param': {'@type': String}
     });
 
     hot.GetFile = hot.IntrinsicFunction.extend({}, {
@@ -706,6 +754,12 @@ HotUI.HOT = {};
                     return json;
                 }
             },
+            '@toJSON': function () {
+                if (this.toArray().length === 1) {
+                    return this.get(0).toJSON();
+                }
+                return Barricade.Array.toJSON.call(this);
+            },
             '*': {'@type': String}
         },
         'update_policy': {
@@ -853,11 +907,18 @@ HotUI.HOT = {};
 
     hot.ParameterGroup = Barricade.create({
         '@type': Object,
-
         'label': {'@type': String},
-        'description': {'@type': String},
+        'description': {
+            '@type': String,
+            '@required': false
+        },
         'parameters': {
             '@type': Array,
+            '@toJSON': function () {
+                return this.toArray().map(function (param) {
+                    return param.getID();
+                });
+            },
             '*': {
                 '@type': String,
                 '@ref': {
