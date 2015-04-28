@@ -135,7 +135,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         });
 
         $label = $g.append('g')
-                   .attr('class', 'label')
+                   .attr('class', 'label');
 
         $textContainer = $label.append('g')
                                .attr('class', 'text_container');
@@ -262,7 +262,7 @@ HotUI.Topology = BaseObject.extend({
             })
             .call(zoom);
 
-        self._topG = self._svg.append('g')
+        self._topG = self._svg.append('g');
 
         self._onZoom([centerX, centerY], scale);
 
@@ -398,8 +398,8 @@ HotUI.Topology = BaseObject.extend({
             }));
 
         return function (d) {
-            var xMin = (d.w + maxW) / 2 + maxPadding;
-                yMin = (d.h + maxH) / 2 + maxPadding;
+            var xMin = (d.w + maxW) / 2 + maxPadding,
+                yMin = (d.h + maxH) / 2 + maxPadding,
                 nx1 = d.x - xMin,
                 nx2 = d.x + xMin,
                 ny1 = d.y - yMin,
