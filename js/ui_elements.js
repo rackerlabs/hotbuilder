@@ -81,14 +81,32 @@ HotUI.UI = (function (hot) {
 
     ui.Base = BaseObject.extend({
         create: function () {
-            return this.extend({});
+            return this.extend({
+                    _childControllers: []
+                });
+        },
+        addChildController: function (c) {
+            return this._childControllers.push(c) - 1;
         },
         _finishHTML: function () { },
-        html: function () {
-            var $domElement = this._doHTML();
-            ko.applyBindings(this, $domElement[0]);
+        html: function (parentController) {
+            var $domElement = this._doHTML(),
+                controllerNum;
+
             this._finishHTML();
-            return $domElement;
+
+            if (parentController) {
+                controllerNum = parentController.addChildController(this);
+                return [
+                    Snippy('<!-- ko with: _childControllers[${0}] -->')([
+                        controllerNum]),
+                    $domElement,
+                    '<!-- /ko -->'
+                ];
+            } else {
+                ko.applyBindings(this, $domElement[0]);
+                return $domElement;
+            }
         }
     });
 
@@ -130,6 +148,72 @@ HotUI.UI = (function (hot) {
         _doHTML: function () {
             return $('<select data-bind="options: _options, value: value">' +
                      '</select>');
+        }
+    });
+
+    ui.Accordion = ui.Base.extend({
+        create: function (sections) {
+            var self = ui.Base.create.call(this);
+            self._sections = sections;
+            self._activeSec = null;
+            self._$sectionContents = [];
+            return self;
+        },
+        _doHTML: function () {
+            var self = this,
+                $html = $('<div class="hb_accordion"></div>'),
+                sections;
+
+            sections = this._sections.map(function (s, i) {
+                var $label = $(Snippy(
+                        '<div class="hb_label">' +
+                            '<div class="hb_collapsed_icon">&#9656;</div>' +
+                            '<div class="hb_expanded_icon">&#9662;</div>' +
+                            ' ${label}' +
+                        '</div>')({label: s.label})),
+                    $content = $('<div class="hb_content"></div>')
+                        .append(s.element.html(self));
+
+                $label.click(function () {
+                    self.clickLabel(i);
+                });
+
+                self._$sectionContents.push($content);
+
+                return $('<div class="hb_section hb_collapsed"></div>')
+                    .append($label, $content);
+            });
+            return $html.append(sections);
+        },
+        closeSection: function (i) {
+            if (i !== null) {
+                this._$sectionContents[i].animate({
+                    height: 'hide',
+                    duration: 500
+                })
+                .parent().removeClass('hb_expanded')
+                         .addClass('hb_collapsed');
+                this._activeSec = null;
+            }
+        },
+        openSection: function (i) {
+            this._$sectionContents[i].animate({
+                height: 'show',
+                duration: 500
+            })
+            .parent().removeClass('hb_collapsed')
+                     .addClass('hb_expanded');
+
+            this._activeSec = i;
+        },
+        clickLabel: function (labelNum) {
+            var shouldOpen = this._activeSec !== labelNum;
+
+            this.closeSection(this._activeSec);
+
+            if (shouldOpen) {
+                this.openSection(labelNum);
+            }
         }
     });
 
@@ -192,7 +276,7 @@ HotUI.UI = (function (hot) {
 
             this._finishHTML = function () {
                 innerControl = getInnerControl();
-                $element.append(innerControl.html());
+                $element.append(innerControl.html(this));
             };
 
             $element = $('<div class="' + this._cssClass + '"></div>')
@@ -232,7 +316,7 @@ HotUI.UI = (function (hot) {
             return self;
         },
         _doHTML: function () {
-            return $('<div><p class="invalid" data-bind="text: valid">' +
+            return $('<div><p class="hb_invalid" data-bind="text: valid">' +
                      '</p></div>');
         }
     });
@@ -487,7 +571,7 @@ HotUI.UI = (function (hot) {
                 if (_parent.instanceof(Barricade.MutableObject) ||
                         _parent.instanceof(Barricade.Array)) {
                     $title.append('<div class="delete_button" ' +
-                                  'data-bind="click: deleteSelf">X</div>');
+                                  'data-bind="click: deleteSelf">x</div>');
                 }
 
                 return $title;
@@ -589,7 +673,7 @@ HotUI.UI = (function (hot) {
                 innerControl = ui.FormControl(data.getValue(), parameters);
 
             self._finishHTML = function () {
-                $element.append(innerControl.html());
+                $element.append(innerControl.html(this));
             };
 
             self._doHTML = function () {
@@ -601,7 +685,7 @@ HotUI.UI = (function (hot) {
 
             data.on('change', function () {
                 innerControl = ui.FormControl(data.getValue(), parameters);
-                $element.empty().append(innerControl.html());
+                $element.empty().append(innerControl.html(this));
             });
 
             return self;
@@ -617,7 +701,7 @@ HotUI.UI = (function (hot) {
                 var $innerControl = $('<div class="inner_control"></div>');
 
                 self._finishHTML = function () {
-                    $innerControl.append(innerControl.html());
+                    $innerControl.append(innerControl.html(this));
                 };
 
                 return $('<div class="IntrinsicFunctionControl"></div>')
@@ -674,7 +758,7 @@ HotUI.UI = (function (hot) {
                 var $element = $('<div></div>');
 
                 self._finishHTML = function () {
-                    $element.append(innerControl.html());
+                    $element.append(innerControl.html(this));
                 };
 
                 return $element;
@@ -711,24 +795,25 @@ HotUI.UI = (function (hot) {
                 label: 'String Replace',
                 type: hot.StringReplace,
                 control: 'StringReplace'
+            }, {
+                label: 'Special Parameter',
+                type: hot.GetParameterSpecial,
+                control: 'GetParameterSpecial'
             }
         ]
     });
 
-    ui.GetAttribute = (function () {
-        function constructor(data, parameters) {
-            if (!(this instanceof constructor)) {
-                return new constructor(data, parameters);
-            }
-
-            var attr = data.get('get_attr'),
+    ui.GetAttribute = ui.Base.extend({
+        create: function (data, parameters) {
+            var self = ui.Base.create.call(this),
+                attr = data.get('get_attr'),
                 resourceControl,
                 valueControl,
                 $element,
                 $attributeSelect,
                 $valueControl;
                 
-            resourceControl = ui.ResourceSelect(
+            resourceControl = ui.ResourceSelect.create(
                 function () {
                     return attr.get('resource');
                 },
@@ -766,13 +851,13 @@ HotUI.UI = (function (hot) {
                 } else {
                     valueControl = ui.SchemalessContainer.create(
                                         attr.get('value'));
-                    return valueControl.html();
+                    return valueControl.html(self);
                 }
             }
 
             function getInnerHTML() {
                 return [
-                    resourceControl.html(),
+                    resourceControl.html(self),
                     $('<div class="attribute_select"></div>')
                         .append(getAttributeSelect()),
                     $('<div class="value_control"><div>')
@@ -780,7 +865,7 @@ HotUI.UI = (function (hot) {
                 ];
             }
 
-            this.attach = function ($el) {
+            self.attach = function ($el) {
                 $element = $el;
                 $attributeSelect = $element.children('.attribute_select');
                 $valueControl = $element.children('.value_control');
@@ -815,28 +900,28 @@ HotUI.UI = (function (hot) {
                 attachAttributeSelect();
             };
 
-            this.html = function () {
+            self.html = function () {
                 var $el = $('<div class="GetAttributeControl"></div>')
                            .append(getInnerHTML());
                 this.attach($el);
                 return $el;
             };
+
+            return self;
         }
+    });
 
-        return constructor;
-    }());
+    ui.GetFile = ui.String.extend({
+        create: function (data, parameters) {
+            return ui.String.create.call(
+                this, data.get('get_file'), parameters);
+        }
+    });
 
-    ui.GetFile = function (data, parameters) {
-        return ui.String.create(data.get('get_file'), parameters);
-    };
-
-    ui.GetParameter = (function () {
-        function constructor(data, parametersIn) {
-            if (!(this instanceof constructor)) {
-                return new constructor(data, parametersIn);
-            }
-
-            var parameters = parametersIn.template.get('parameters'),
+    ui.GetParameter = ui.Base.extend({
+        create: function (data, parametersIn) {
+            var self = ui.Base.create.call(this),
+                parameters = parametersIn.template.get('parameters'),
                 $element,
                 $select;
 
@@ -871,7 +956,7 @@ HotUI.UI = (function (hot) {
                 return getSelect();
             }
 
-            this.attach = function ($el) {
+            self.attach = function ($el) {
                 $element = $el;
                 $select = $element.children('select');
 
@@ -887,35 +972,28 @@ HotUI.UI = (function (hot) {
                 });
             };
 
-            this.html = function () {
+            self.html = function () {
                 var $el = $('<div class="GetParameterControl"></div>')
                               .append(getInnerHTML());
                 this.attach($el);
                 return $el;
             };
+
+            return self;
         }
+    });
 
-        return constructor;
-    }());
+    ui.GetParameterSpecial = ui.String.extend({
+        create: function (data, parameters) {
+            return ui.String.create.call(this, data.get('get_param'),
+                                         parameters);
+        }
+    });
 
-    ui.GetResource = function (data, parameters) {
-        return ui.ResourceSelect(
-            function () {
-                return data.get('get_resource');
-            },
-            function (newVal) {
-                data.set('get_resource', newVal);
-            },
-            parameters.template.get('resources'));
-    };
-
-    ui.ResourceSelect = (function () {
-        function constructor(getter, setter, resources) {
-            if (!(this instanceof constructor)) {
-                return new constructor(getter, setter, resources);
-            }
-
-            var $element,
+    ui.ResourceSelect = ui.Base.extend({
+        create: function (getter, setter, resources) {
+            var self = ui.Base.create.call(this),
+                $element,
                 $select;
 
             function getResourceID() {
@@ -949,7 +1027,7 @@ HotUI.UI = (function (hot) {
                 return getSelect();
             }
 
-            this.attach = function ($el) {
+            self.attach = function ($el) {
                 $element = $el;
                 $select = $element.children('select');
 
@@ -965,25 +1043,40 @@ HotUI.UI = (function (hot) {
                 });
             };
 
-            this.html = function () {
+            self.html = function () {
                 var $el = $('<div class="ResourceSelectControl"></div>')
                            .append(getInnerHTML());
                 this.attach($el);
                 return $el;
             };
+
+            return self;
         }
+    });
 
-        return constructor;
-    }());
+    ui.GetResource = ui.ResourceSelect.extend({
+        create: function (data, parameters) {
+            return ui.ResourceSelect.create.call(
+                this,
+                function () { return data.get('get_resource'); },
+                function (newVal) { data.set('get_resource', newVal); },
+                parameters.template.get('resources'));
+        }
+    });
 
-    ui.ResourceFacade = function (data, parameters) {
-        return ui.String.create(
-            data.get('resource_facade'), parameters);
-    };
+    ui.ResourceFacade = ui.String.extend({
+        create: function (data, parameters) {
+            return ui.String.create.call(this, data.get('resource_facade'),
+                                         parameters);
+        }
+    });
 
-    ui.StringReplace = function (data, parameters) {
-        return ui.FormControl(data.get('str_replace'), parameters);
-    };
+    ui.StringReplace = ui.ImmutableObject.extend({
+        create: function (data, parameters) {
+            return ui.ImmutableObject.create.call(
+                this, data.get('str_replace'), parameters);
+        }
+    });
 
     ui.ParameterConstraint = ui.MultiControl.extend({
         _cssClass: 'ParameterConstraintControl',
@@ -1090,6 +1183,49 @@ HotUI.UI = (function (hot) {
         },
         getSelection: function () {
             return this._html.val();
+        }
+    });
+
+    ui.Modal = BaseObject.extend({
+        create: function (options) {
+            var self = this.extend({});
+
+            if (!options.buttons) {
+                options.buttons = [{'label': 'Okay'}];
+            }
+            self._options = options;
+            return self;
+        },
+        display: function () {
+            var $container = $('#hb_modal_layer'),
+                $buttons = $('<div class="hb_modal_buttons"></div>'),
+                $modal = $(Snippy(
+                    '<div class="hb_modal ${cssClass}">' +
+                        '<div class="hb_modal_title">${title}</div>' +
+                        '<div class="hb_modal_content">${content}</div>' +
+                    '</div>')(this._options));
+
+            $buttons.append(this._options.buttons.map(function (button) {
+                var $button = $(Snippy(
+                        '<div class="hb_modal_button ${cssClass}">' +
+                        '${label}</div>')(button));
+
+                $button.click(function () {
+                    $container.fadeOut(250, function () {
+                        $button.remove();
+                    });
+
+                    if (button.action) {
+                        button.action();
+                    }
+                });
+
+                return $button;
+            }));
+
+            $modal.append($buttons);
+
+            $container.append($modal).fadeIn(250);
         }
     });
 

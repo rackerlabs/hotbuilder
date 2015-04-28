@@ -123,10 +123,8 @@
 #hotui_side_panel_content {
     bottom: 30px;
     left: 0;
-    overflow-y: auto;
-    padding: 5px 10px;
     position: absolute;
-    right: 5px;
+    right: 0;
     top: 0;
 }
 
@@ -155,19 +153,6 @@
 
 .hotui_side_panel_nav > .nav_button.active {
     background-color: #c0c0c0;
-}
-
-#hotui_side_panel_content::-webkit-scrollbar {
-    width: 8px;
-}
-
-#hotui_side_panel_content::-webkit-scrollbar-track {
-    margin: 5px;
-}
-
-#hotui_side_panel_content::-webkit-scrollbar-thumb {
-    background-color: #c0c0c0;
-    border-radius: 4px;
 }
 
 #hotui_side_panel_content hr {
@@ -239,8 +224,91 @@
 }
 
 /*
+ * Modals
+ */
+#hb_modal_layer {
+    bottom: 0;
+    display: none;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+#hb_modal_layer > .hb_screen {
+    background-color: black;
+    height: 100%;
+    opacity: 0.5;
+    position: absolute;
+    width: 100%;
+}
+
+.hb_modal {
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    left: 50%;
+    padding: 15px;
+    position: absolute;
+    top: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+}
+
+.hb_modal > .hb_modal_title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.hb_modal > .hb_modal_buttons {
+    float: right;
+    margin-top: 10px;
+}
+
+.hb_modal_button {
+    background-color: #b0b0b0;
+    border: 1px solid #b0b0b0;
+    border-radius: 3px;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    margin: 2px;
+    padding: 3px 5px;
+}
+
+.hb_modal_button:hover {
+    background-color: white;
+    color: #b0b0b0;
+}
+
+.hb_modal_button.hb_red {
+    background-color: red;
+    border: 1px solid red;
+}
+
+.hb_modal_button.hb_red:hover {
+    background-color: white;
+    color: red;
+}
+
+/*
  * Form Elements
  */
+
+.hb_scroll {
+    overflow-y: auto;
+}
+
+.hb_scroll::-webkit-scrollbar {
+    width: 14px;
+}
+
+.hb_scroll::-webkit-scrollbar-thumb {
+    background-color: #c0c0c0;
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 7px;
+}
 
 .Container {
     border-left: solid 1px #b0b0b0;
@@ -307,9 +375,11 @@
 }
 
 .ElementWrapper .delete_button {
+    border-radius: 10px;
     color: red;
-    height: 24px;
-    line-height: 24px;
+    height: 20px;
+    line-height: 18px;
+    margin-top: 2px;
     position: absolute;
     right: 4px;
     text-align: center;
@@ -435,23 +505,115 @@
     width: 100%;
 }
 
-#hotui_side_panel .invalid {
+#hotui_side_panel .hb_invalid {
     color: red;
+    display: none;
+}
+
+.hb_accordion > .hb_section > .hb_label {
+    border-top: 1px solid #d0d0d0;
+    font-size: 20px;
+    padding: 2px;
+}
+
+.hb_accordion > .hb_section:first-child > .hb_label {
+    border-top: none;
+}
+
+.hb_accordion > .hb_section > .hb_label:hover {
+    background-color: #d0d0d0;
+    cursor: pointer;
+}
+
+.hb_accordion > .hb_section > .hb_label > .hb_collapsed_icon,
+.hb_accordion > .hb_section > .hb_label > .hb_expanded_icon {
+    width: 13px;
+    display: none;
+}
+.hb_accordion > .hb_section.hb_collapsed > .hb_label > .hb_collapsed_icon {
+    display: inline-block;
+}
+
+.hb_accordion > .hb_section.hb_expanded > .hb_label > .hb_expanded_icon {
+    display: inline-block;
+}
+
+.hb_accordion > .hb_section > .hb_content {
+    display: none;
 }
 
 /*
  * Panels
  */
 
+.hb_panel {
+    height: 100%;
+    padding: 5px 10px;
+}
+
+/* Home */
+.hb_home {
+    padding: 0;
+}
+
+.hb_home > .hb_add_resource {
+    height: 60%;
+    padding: 5px 10px;
+}
+
+.hb_search_resources {
+    width: 100%;
+}
+
+.hb_search_resources:focus {
+    outline: none;
+}
+
+.hb_home > .hb_ref_arch {
+    border-top: 1px solid #e0e0e0;
+    height: 40%;
+    padding: 5px 10px;
+}
+
+.hb_prebuilt_config {
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-block;
+    margin: 2px;
+    text-align: center;
+    padding: 3px;
+    width: 85px;
+}
+
+.hb_prebuilt_config:hover {
+    background-color: #d0d0d0;
+}
+
 /* Add Resource */
-.resource_org {
+.hb_more_resources {
+
+}
+
+.hb_resource_org {
     margin-top: 10px;
+}
+
+.hb_resource_org > h3 {
     text-align: center;
 }
 
 .resource_draggable {
+    cursor: pointer;
     margin-left: 15px;
     position: relative;
+}
+
+.resource_draggable:hover {
+    background-color: #d0d0d0;
+}
+
+.resource_draggable.hb_dragging:hover {
+    background-color: transparent;
 }
 
 .resource_draggable > div {
@@ -499,4 +661,8 @@
 
 .resource_hidden {
     opacity: 0;
+}
+
+/* Template */
+.hb_template_panel {
 }

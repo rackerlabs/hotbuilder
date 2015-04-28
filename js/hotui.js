@@ -23,11 +23,12 @@ HotUI.App = BaseObject.extend({
             }).create([{}])),
             topology = HotUI.Topology.create($("#hotui_topology")),
             sidePanel = HotUI.SidePanel.create(
+                                        templates,
                                         $("#hotui_side_panel"),
                                         $("#hotui_side_panel_content"),
                                         $("#hotui_side_panel > .close_button")),
             sourcePanel = HotUI.SourcePanel.create(templates,
-                                                   $("#hotui_source_panel"));
+                                                   $("#hotui_source_panel")),
             untitledResources = 0;
 
         self._topology = topology;
@@ -62,13 +63,13 @@ HotUI.App = BaseObject.extend({
         });
 
         $(window).unload(function () {
-            localStorage.setItem('template', JSON.stringify(template().toJSON()));
+            localStorage.setItem('template',
+                                 JSON.stringify(template().toJSON()));
         });
 
         // initialization
-        templates.set(0, JSON.parse(localStorage.getItem('template')));
+        templates.set(0, JSON.parse(localStorage.getItem('template') || {}));
         sidePanel.setOnResourceDrop(addResource);
-        sidePanel.showAddResourcePanel();
 
         topology.setData(template().get('resources'));
         topology.setOnResourceClick(onResourceClick);
