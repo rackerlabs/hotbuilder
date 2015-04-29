@@ -20,11 +20,13 @@ HotUI.SourcePanel = BaseObject.extend({
                 _visible: false,
                 _lastWidth: this._normalWidth
             }),
+            showText = 'Show Template',
+            hideText = 'Hide Template',
             $textarea = $('<textarea></textarea>'),
             $sideButtons = $('<div class="hb_side_buttons"></div>'),
-            $showHide = $('<div class="hb_show">YAML</div>'),
-            $save = $('<div class="hb_save">Save</div>'),
-            $validate = $('<div class="hb_validate">Validate with Heat</div>'),
+            $showHide = $('<div class="hb_show">' + showText + '</div>'),
+            $save = $('<div class="hb_save">Update Topology</div>'),
+            $validate = $('<div class="hb_validate">Validate</div>'),
             $download = $('<div class="hb_download">Download</div>');
 
         self._$save = $save;
@@ -56,8 +58,10 @@ HotUI.SourcePanel = BaseObject.extend({
 
         $showHide.click(function () {
             if (self._visible) {
+                $showHide.text(showText);
                 self.hide();
             } else {
+                $showHide.text(hideText);
                 self.show();
             }
         });
