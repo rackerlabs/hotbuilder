@@ -36,20 +36,6 @@
     width: 100%;
 }
 
-#hotui_beta_warning {
-    left: 50%;
-    position: absolute;
-    top: 38px;
-    z-index: 2000;
-}
-
-#hotui_beta_warning > p {
-    color: red;
-    left: -50%;
-    margin: 0;
-    position: relative;
-}
-
 /*
  * Topology
  */
