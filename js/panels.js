@@ -113,14 +113,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             resListHTML = '',
             resMap,
             resMapKeys,
-            commonResources = [
-                'OS::Nova::Server',
-                'Rackspace::Cloud::WinServer',
-                'Rackspace::Cloud::LoadBalancer',
-                'Rackspace::Cloud::DNS',
-                'Rackspace::Cloud::Network',
-                'OS::Trove::Instance',
-            ],
+            commonResources = HOTUI_COMMON_RESOURCES,
             keyOrder = ['Rackspace', 'OS'],
             $accordion,
             $commonResources,
@@ -144,12 +137,12 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             };
         }
 
-        function getDraggableHTML(resType) {
+        function getDraggableHTML(resType, label) {
             return Snippy(
                 '<div class="resource_draggable" type="${type}">' +
-                '<div></div>${sec}</div>')({
+                '<div></div>${label}</div>')({
                     type: resType.getID(),
-                    sec: getSection(resType, 2)
+                    label: label || getSection(resType, 2)
             });
 
         }
@@ -201,8 +194,9 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
         $commonResources = $(
             '<div>' +
             '<h4>Common Resources</h4>' +
-            commonResources.map(function (type) {
-                return getDraggableHTML(HotUI.HOT.resourceTypes.getByID(type));
+            commonResources.map(function (res) {
+                return getDraggableHTML(
+                    HotUI.HOT.resourceTypes.getByID(res.resource), res.label);
             }).join('') + '</div>');
 
         $html.append($commonResources);
