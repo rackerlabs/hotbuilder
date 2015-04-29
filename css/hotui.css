@@ -86,7 +86,7 @@
 
 #hotui_side_panel {
     background-color: #f0f0f0;
-    bottom: 0;
+    bottom: 30px;
     left: 0;
     position: absolute;
     width: 400px;
@@ -101,17 +101,31 @@
     top: 0;
 }
 
-.hotui_side_panel_nav {
+#hotui_navbar {
     background-color: #e0e0e0;
     bottom: 0;
     height: 30px;
     left: 0;
     position: absolute;
     right: 0;
-    text-align: center;
 }
 
-.hotui_side_panel_nav > .nav_button {
+#hotui_navbar > .hb_left_side,
+#hotui_navbar > .hb_right_side {
+    bottom: 0;
+    position: absolute;
+    top: 0;
+}
+
+#hotui_navbar > .hb_left_side {
+    left: 0;
+}
+
+#hotui_navbar > .hb_right_side {
+    right: 0;
+}
+
+#hotui_navbar > * > .nav_button {
     cursor: pointer;
     display: inline-block;
     height: 100%;
@@ -120,11 +134,11 @@
     padding-top: 5px;
 }
 
-.hotui_side_panel_nav > .nav_button:hover {
+#hotui_navbar > * > .nav_button:hover {
     background-color: #d0d0d0;
 }
 
-.hotui_side_panel_nav > .nav_button.active {
+#hotui_navbar > * > .nav_button.active {
     background-color: #c0c0c0;
 }
 
@@ -148,7 +162,7 @@
  * Source Panel
  */
 #hotui_source_panel {
-    bottom: 0;
+    bottom: 30px;
     position: absolute;
     right: 0;
     top: 0;
@@ -206,6 +220,7 @@
     position: absolute;
     right: 0;
     top: 0;
+    z-index: 200;
 }
 
 #hb_modal_layer > .hb_screen {
@@ -262,6 +277,20 @@
 .hb_modal_button.hb_red:hover {
     background-color: white;
     color: red;
+}
+
+.hb_modal_button.hb_green {
+    background-color: #76c228;
+    border: 1px solid #76c228;
+}
+
+.hb_modal_button.hb_green:hover {
+    background-color: white;
+    color: #76c228;
+}
+
+.hb_load_from_url {
+    width: 100%;
 }
 
 /*

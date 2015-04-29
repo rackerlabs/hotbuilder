@@ -79,43 +79,7 @@ HotUI.SourcePanel = BaseObject.extend({
             });
         });
 
-        $download.click(function () {
-            var templateJSON = JSON.stringify(self.template().toJSON(true))
-                                   .replace(/\"/g, '&quot;'),
-                $form = $(Snippy(
-                    '<form method="POST" action="${action}">' +
-                        '<input type="hidden" name="json" value="${json}">' +
-                        '<input type="hidden" name="csrfmiddlewaretoken" ' +
-                                'value="${csrf}">')({
-                            action: ENDPOINTS.downloadTemplate,
-                            json: templateJSON,
-                            csrf: $("meta[name='csrftoken']").attr('content')
-                        }));
-            $form.appendTo('body')
-                 .submit()
-                 .remove();
-        });
-
-        $validate.click(function () {
-            $.ajax({
-                type: 'POST',
-                url: ENDPOINTS.templateValidate,
-                data: {
-                    'endpoint': STACK_ENDPOINT,
-                    'template': JSON.stringify(self.template().toJSON(true))
-                },
-                success: function (data) {
-                    if (typeof data === 'string') {
-                        alert('Validation Failed:\n\n' + data);
-                    } else {
-                        alert('Validation Passed');
-                    }
-                }
-            });
-        });
-
-        $container.append($sideButtons.append($showHide, $save, $validate,
-                                              $download));
+        $container.append($sideButtons.append($showHide, $save));
 
         return self;
     },

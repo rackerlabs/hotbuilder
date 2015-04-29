@@ -57,3 +57,11 @@ Object.defineProperty(BaseObject, 'instanceof', {
         return false;
     }
 });
+
+ko.bindingHandlers.foreach2 = { // Creates $p, much shorter than $parent
+    init: ko.bindingHandlers.foreach.init,
+    update: function (el, va, ab, vm, bindContext) {
+        bindContext.$p = bindContext.$data;
+        return ko.bindingHandlers.foreach.update(el, va, ab, vm, bindContext);
+    }
+};

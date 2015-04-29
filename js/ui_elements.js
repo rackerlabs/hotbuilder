@@ -1197,6 +1197,7 @@ HotUI.UI = (function (hot) {
             return self;
         },
         display: function () {
+            var self = this;
             var $container = $('#hb_modal_layer'),
                 $buttons = $('<div class="hb_modal_buttons"></div>'),
                 $modal = $(Snippy(
@@ -1212,7 +1213,8 @@ HotUI.UI = (function (hot) {
 
                 $button.click(function () {
                     $container.fadeOut(250, function () {
-                        $button.remove();
+                        console.log('removing ' + self._options.title);
+                        $modal.remove();
                     });
 
                     if (button.action) {
@@ -1224,8 +1226,9 @@ HotUI.UI = (function (hot) {
             }));
 
             $modal.append($buttons);
-
+            ko.applyBindings(this, $modal[0]);
             $container.append($modal).fadeIn(250);
+            return this;
         }
     });
 

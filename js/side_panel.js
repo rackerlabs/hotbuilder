@@ -22,7 +22,6 @@ HotUI.SidePanel = BaseObject.extend({
                 _$navbar: $container.children('.hotui_side_panel_nav')
             });
 
-        self._setupNav();
         self._$navbar.children('.nav_button').eq(0).trigger('click');
 
         return self;
@@ -32,30 +31,6 @@ HotUI.SidePanel = BaseObject.extend({
         this._$content.empty();
         this._$content.append(panel.html());
     },
-    _setupNav: function () {
-        var self = this,
-            panels = [
-                {
-                    label: 'Home',
-                    panel: HotUI.Panel.Home.create(
-                        this._templates, function () {
-                            return self._onResourceDrop.apply(self, arguments);
-                        })
-                }, {
-                    label: 'Template',
-                    panel: HotUI.Panel.Template.create(this._templates)
-                }
-            ];
-
-        this._$navbar.append(panels.map(function (p) {
-            return $(Snippy('<div class="nav_button">${label}</div>')(p))
-                .click(function () {
-                    self._displayPanel(p.panel);
-                    $(this).addClass('active')
-                           .siblings('.active').removeClass('active');
-                });
-        }));
-    },
     _onResourceDrop: function () {},
     setTemplate: function (newTemplate) {
         this._template = newTemplate;
@@ -64,17 +39,25 @@ HotUI.SidePanel = BaseObject.extend({
         this._onResourceDrop = callback;
         return this;
     },
+    showHome: function () {
+        var self = this,
+            panel = HotUI.Panel.Home.create(
+                this._templates, function () {
+                    return self._onResourceDrop.apply(self, arguments);
+                });
+        this._displayPanel(panel);
+
+    },
+    showTemplate: function () {
+        this._displayPanel(HotUI.Panel.Template.create(this._templates));
+    },
     showResource: function (resource) {
         var panel = HotUI.Panel.ResourceDetail.create(resource, this._template);
         this._displayPanel(panel);
-        this._$navbar.children('.nav_button.active')
-                     .removeClass('active');
     },
     showLinkCreatePanel: function (sourceResource, targetResource) {
         var panel = HotUI.Panel.LinkCreate.create(sourceResource,
                                                   targetResource);
         this._displayPanel(panel);
-        this._$navbar.children('.nav_button.active')
-                     .removeClass('active');
     }
 });

@@ -21,6 +21,7 @@ HotUI.App = BaseObject.extend({
                 '@type': Array,
                 '*': {'@class': HotUI.HOT.Template}
             }).create([{}])),
+            navbar,
             topology = HotUI.Topology.create($("#hotui_topology")),
             sidePanel = HotUI.SidePanel.create(
                                         templates,
@@ -31,6 +32,130 @@ HotUI.App = BaseObject.extend({
                                                    $("#hotui_source_panel")),
             untitledResources = 0;
 
+        function loadTemplateFromURL(startingURL) {
+            var url = ko.observable(startingURL || '');
+
+            function doLoad() {
+                $.ajax({
+                    type: 'GET',
+                    url: ENDPOINTS.urlToJSON,
+                    data: {url: url()},
+                    success: function (data) {
+                        if (typeof data === 'string') {
+                            HotUI.UI.Modal.create({
+                                title: 'Error Loading Template',
+                                content: data,
+                                buttons: [
+                                    {
+                                        label: 'Try Again',
+                                        cssClass: 'hb_green',
+                                        action: function () {
+                                            loadTemplateFromURL(url());
+                                        }
+                                    }, {
+                                        label: 'Give Up'
+                                    }
+                                ]
+                            }).display();
+                        } else {
+                            templates.set(0, data);
+                        }
+                    }
+                });
+            }
+
+            HotUI.UI.Modal.create({
+                title: 'Load Template',
+                content:
+                    '<p>This will overwrite your current template!</p>' +
+                    '<p>Enter the URL of a <strong>plain text</strong> template ' +
+                        'file:</p>' +
+                    '<input class="hb_load_from_url" type="text" ' +
+                           'data-bind="value: _options.url">',
+                buttons: [
+                    {
+                        label: 'Load',
+                        cssClass: 'hb_red',
+                        action: doLoad
+                    }, {
+                        label: 'Cancel'
+                    }
+                ],
+                url: url
+            }).display();
+        }
+
+        function validateTemplate() {
+            $.ajax({
+                type: 'POST',
+                url: ENDPOINTS.templateValidate,
+                data: {
+                    'endpoint': STACK_ENDPOINT,
+                    'template': JSON.stringify(template().toJSON(true))
+                },
+                success: function (data) {
+                    var passed = typeof data !== 'string';
+                    HotUI.UI.Modal.create({
+                        title: 'Validation',
+                        content: (passed
+                            ? '<p>Passed!</p>'
+                            : '<p>Failed:</p><p>' + data + '</p>')
+                    }).display();
+                }
+            });
+        }
+
+        function downloadTemplate() {
+            var templateJSON = JSON.stringify(template().toJSON(true))
+                                   .replace(/\"/g, '&quot;'),
+                $form = $(Snippy(
+                    '<form method="POST" action="${action}">' +
+                        '<input type="hidden" name="json" value="${json}">' +
+                        '<input type="hidden" name="csrfmiddlewaretoken" ' +
+                                'value="${csrf}">')({
+                            action: ENDPOINTS.downloadTemplate,
+                            json: templateJSON,
+                            csrf: $("meta[name='csrftoken']").attr('content')
+                        }));
+            $form.appendTo('body')
+                 .submit()
+                 .remove();
+        }
+
+        function resetTemplate() {
+            HotUI.UI.Modal.create({
+                title: 'Warning',
+                content: 'This will clear your current template!',
+                buttons: [
+                    {
+                        label: 'Reset',
+                        cssClass: 'hb_red',
+                        action: function () {
+                            self._templates.set(0, undefined);
+                        }
+                    }, {
+                        label: 'Cancel'
+                    }
+                ]
+            }).display();
+        }
+
+        navbar = HotUI.Navbar.create(
+            templates,
+            $("#hotui_navbar"), [
+                {label: 'Home',
+                 action: function () { sidePanel.showHome(); }},
+                {label: 'Template',
+                 action: function () { sidePanel.showTemplate(); }}
+            ], [
+                {label: 'Load', action: loadTemplateFromURL},
+                {label: 'Validate', action: validateTemplate},
+                {label: 'Download', action: downloadTemplate},
+                {label: 'Reset', action: resetTemplate},
+            ]);
+
+
+        self._navbar = navbar;
         self._topology = topology;
         self._templates = templates;
         self._sidePanel = sidePanel;
@@ -53,6 +178,7 @@ HotUI.App = BaseObject.extend({
 
         function onResourceClick(resource) {
             sidePanel.showResource(resource);
+            navbar.clearActiveTab();
         }
 
         templates.on('change', function (type, index, newTemp, oldTemp) {
@@ -75,7 +201,9 @@ HotUI.App = BaseObject.extend({
         topology.setOnResourceClick(onResourceClick);
         topology.setOnLinkCreatorCreate(function (source, target) {
             sidePanel.showLinkCreatePanel(source, target);
+            navbar.clearActiveTab();
         });
+        navbar.clickTab(0);
 
         return self;
     },
