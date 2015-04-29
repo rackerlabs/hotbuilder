@@ -15,25 +15,12 @@
 
 #hotui_app {
     background-color: white;
-    bottom: 20px;
+    bottom: 0;
     left: 0;
     overflow: hidden;
     position: absolute;
     right: 0;
-    top: 55px; /* navbar is at 55px versus 50px due to
-                  .divider-vertical (height: 55px)
-                  .navbar-nav > li > a (padding-top: 20px adds 5px)
-               */
-}
-
-#hotui_bottom_strip {
-    background-color: black;
-    bottom: 0;
-    color: white;
-    height: 20px;
-    position: fixed;
-    text-align: center;
-    width: 100%;
+    top: 0;
 }
 
 /*
