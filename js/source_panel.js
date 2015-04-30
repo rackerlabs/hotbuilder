@@ -17,23 +17,23 @@ HotUI.SourcePanel = BaseObject.extend({
         var self = this.extend({
                 _$container: $container,
                 _templates: templates,
-                _visible: false,
+                _visible: ko.observable(false),
+                _expanded: ko.observable(false),
                 _lastWidth: this._normalWidth
             }),
-            showText = 'Show Template',
-            hideText = 'Hide Template',
-            $textarea = $('<textarea></textarea>'),
-            $sideButtons = $('<div class="hb_side_buttons"></div>'),
-            $showHide = $('<div class="hb_show">' + showText + '</div>'),
-            $save = $('<div class="hb_save">Update Topology</div>'),
-            $validate = $('<div class="hb_validate">Validate</div>'),
-            $download = $('<div class="hb_download">Download</div>');
+            updateYAML = self._updateYAML.bind(self),
+            $textarea = $('<textarea></textarea>');
 
-        self._$save = $save;
-        self._$validate = $validate;
-        self._$download = $download;
-
-        $container.append($textarea);
+        $container.append($textarea,
+            '<div class="hb_side_buttons" ' +
+                 'data-bind="css: {hb_invisible: !_visible()}">' +
+                '<div class="hb_expand" data-bind="text: _getExpandText(), ' +
+                                            'click: toggleExpand"></div>' +
+                '<div class="hb_save" data-bind="click: updateTemplate">' +
+                    'Update Topology</div>' +
+                '<div data-bind="text: _getShowText(), ' +
+                                'click: toggleVisible"></div>' +
+            '</div>');
 
         self._cm = CodeMirror.fromTextArea($textarea[0], {
             lineNumbers: true,
@@ -41,10 +41,6 @@ HotUI.SourcePanel = BaseObject.extend({
             mode: "yaml",
             theme: "tomorrow-night-eighties"
         });
-
-        function updateYAML() {
-            return self._updateYAML();
-        }
 
         templates.on('change', function (type, index, newTemp, oldTemp) {
             if (type === 'set' && index === 0) {
@@ -56,74 +52,99 @@ HotUI.SourcePanel = BaseObject.extend({
             }
         });
 
-        $showHide.click(function () {
-            if (self._visible) {
-                $showHide.text(showText);
-                self.hide();
-            } else {
-                $showHide.text(hideText);
-                self.show();
-            }
-        });
-
-        $save.click(function () {
-            $.ajax({
-                type: 'POST',
-                url: ENDPOINTS.yamlToJSON,
-                data: {
-                    'yaml': self._cm.getValue()
-                },
-                success: function (data) {
-                    templates.set(0, data);
-                }
-            });
-        });
-
-        $container.append($sideButtons.append($showHide, $save));
-
+        ko.applyBindings(self, $container[0]);
         return self;
     },
     _normalWidth: 450,
     _updateYAML: function () {
-        var self = this;
         $.ajax({
             type: 'POST',
             url: ENDPOINTS.jsonToYAML,
-            data: {
-                'json': JSON.stringify(this.template().toJSON(true))
-            },
-            success: function (data) {
-                self._cm.setValue(data);
-            }
+            data: {json: JSON.stringify(this.template().toJSON(true))},
+            success: (function (data) {
+                this._cm.setValue(data);
+            }).bind(this)
         });
+    },
+    _getExpandText: function () {
+        return this._expanded() ? 'Collapse' : 'Expand';
+    },
+    _getShowText: function () {
+        return this._visible() ? 'Hide Template' : 'Show Template';
     },
     template: function () {
         return this._templates.get(0);
     },
+    updateTemplate: function () {
+        $.ajax({
+            type: 'POST',
+            url: ENDPOINTS.yamlToJSON,
+            data: {yaml: this._cm.getValue()},
+            success: (function (data) {
+                this._templates.set(0, data);
+            }).bind(this)
+        });
+    },
+    toggleVisible: function () {
+        this._visible() ? this.hide() : this.show();
+    },
     hide: function () {
-        var self = this;
-        this._$save.fadeOut(250);
-        this._$validate.fadeOut(250);
-        this._$download.fadeOut(250);
+        this._visible(false);
         this._$container
-            .animate({width: 0}, 500, function () {
-                self._visible = false;
+            .css({
+                left: 'auto',
+                width: this._lastWidth
             })
+            .animate({width: 0}, 500)
             .addClass('hb_invisible')
             .removeClass('hb_visible')
             .css('overflow', 'visible');
     },
     show: function () {
-        var self = this;
-        this._$save.fadeIn(250);
-        this._$validate.fadeIn(250);
-        this._$download.fadeIn(250);
         this._$container
-            .animate({width: this._lastWidth}, 500, function () {
-                self._visible = true;
-            })
+            .animate({width: this._lastWidth}, 500, (function () {
+                if (this._expanded()) {
+                    this._$container.css({
+                        left: 400,
+                        width: 'auto'
+                    });
+                }
+                this._visible(true);
+            }).bind(this))
             .addClass('hb_visible')
             .removeClass('hb_invisible')
             .css('overflow', 'visible');
+    },
+    toggleExpand: function () {
+        this._expanded() ? this.collapse() : this.expand();
+    },
+    collapse: function () {
+        this._expanded(false);
+        this._$container.css({
+            left: 'auto',
+            width: this._$container.parent().width() - 400
+        }).animate({
+            width: this._normalWidth
+        }, {
+            duration: 400,
+            complete: (function () {
+                this._lastWidth = this._normalWidth
+            }).bind(this)
+        });
+    },
+    expand: function () {
+        this._expanded(true);
+        this._$container.animate({
+            width: this._$container.parent().width() - 400
+        }, {
+            duration: 400,
+            complete: (function () {
+                this._lastWidth = this._$container.width()
+                this._$container.css({
+                    left: 400,
+                    width: 'auto'
+                })
+            }).bind(this)
+        });
     }
 });

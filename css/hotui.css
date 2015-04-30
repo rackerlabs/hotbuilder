@@ -162,7 +162,9 @@
  * Source Panel
  */
 #hotui_source_panel {
+    background-color: #000;
     bottom: 30px;
+    padding-top: 32px;
     position: absolute;
     right: 0;
     top: 0;
@@ -171,13 +173,26 @@
 
 #hotui_source_panel > .CodeMirror {
     height: 100%;
-    width: 450px;
+    min-width: 450px;
+    width: 100%;
+}
+
+#hotui_source_panel .CodeMirror-vscrollbar::-webkit-scrollbar {
+    width: 14px;
+}
+
+#hotui_source_panel .CodeMirror-vscrollbar::-webkit-scrollbar-thumb {
+    background-color: #505050;
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 7px;
 }
 
 #hotui_source_panel > .hb_side_buttons {
-    left: -5px;
+    right: 5px;
     position: absolute;
     top: 5px;
+    z-index: 10;
 }
 
 #hotui_source_panel > .hb_side_buttons > * {
@@ -185,29 +200,17 @@
     border-radius: 5px;
     color: white;
     cursor: pointer;
+    display: inline-block;
+    margin-left: 3px;
     padding: 2px 8px;
-    position: absolute;
     right: 0;
     text-align: center;
     white-space: nowrap;
 }
 
-#hotui_source_panel > .hb_side_buttons > .hb_save,
-#hotui_source_panel > .hb_side_buttons > .hb_validate,
-#hotui_source_panel > .hb_side_buttons > .hb_download {
+#hotui_source_panel > .hb_side_buttons.hb_invisible > .hb_save,
+#hotui_source_panel > .hb_side_buttons.hb_invisible > .hb_expand {
     display: none;
-}
-
-#hotui_source_panel > .hb_side_buttons > .hb_save {
-    top: 27px;
-}
-
-#hotui_source_panel > .hb_side_buttons > .hb_validate {
-    top: 54px;
-}
-
-#hotui_source_panel > .hb_side_buttons > .hb_download {
-    top: 81px;
 }
 
 /*
