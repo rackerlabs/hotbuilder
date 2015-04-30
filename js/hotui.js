@@ -68,8 +68,8 @@ HotUI.App = BaseObject.extend({
                 title: 'Load Template',
                 content:
                     '<p>This will overwrite your current template!</p>' +
-                    '<p>Enter the URL of a <strong>plain text</strong> template ' +
-                        'file:</p>' +
+                    '<p>Enter the URL of a <strong>plain text</strong> ' +
+                    'template file:</p>' +
                     '<input class="hb_load_from_url" type="text" ' +
                            'data-bind="value: _options.url">',
                 buttons: [

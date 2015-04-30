@@ -62,9 +62,9 @@ HotUI.SourcePanel = BaseObject.extend({
             type: 'POST',
             url: ENDPOINTS.jsonToYAML,
             data: {json: JSON.stringify(this.template().toJSON(true))},
-            success: (function (data) {
+            success: function (data) {
                 this._cm.setValue(data);
-            }).bind(this)
+            }.bind(this)
         });
     },
     _getExpandText: function () {
@@ -81,13 +81,13 @@ HotUI.SourcePanel = BaseObject.extend({
             type: 'POST',
             url: ENDPOINTS.yamlToJSON,
             data: {yaml: this._cm.getValue()},
-            success: (function (data) {
+            success: function (data) {
                 this._templates.set(0, data);
-            }).bind(this)
+            }.bind(this)
         });
     },
     toggleVisible: function () {
-        this._visible() ? this.hide() : this.show();
+        if(this._visible()) { this.hide(); } else { this.show(); }
     },
     hide: function () {
         this._visible(false);
@@ -103,7 +103,7 @@ HotUI.SourcePanel = BaseObject.extend({
     },
     show: function () {
         this._$container
-            .animate({width: this._lastWidth}, 500, (function () {
+            .animate({width: this._lastWidth}, 500, function () {
                 if (this._expanded()) {
                     this._$container.css({
                         left: 400,
@@ -111,13 +111,13 @@ HotUI.SourcePanel = BaseObject.extend({
                     });
                 }
                 this._visible(true);
-            }).bind(this))
+            }.bind(this))
             .addClass('hb_visible')
             .removeClass('hb_invisible')
             .css('overflow', 'visible');
     },
     toggleExpand: function () {
-        this._expanded() ? this.collapse() : this.expand();
+        if(this._expanded()) { this.collapse(); } else { this.expand(); }
     },
     collapse: function () {
         this._expanded(false);
@@ -128,9 +128,9 @@ HotUI.SourcePanel = BaseObject.extend({
             width: this._normalWidth
         }, {
             duration: 400,
-            complete: (function () {
-                this._lastWidth = this._normalWidth
-            }).bind(this)
+            complete: function () {
+                this._lastWidth = this._normalWidth;
+            }.bind(this)
         });
     },
     expand: function () {
@@ -139,13 +139,13 @@ HotUI.SourcePanel = BaseObject.extend({
             width: this._$container.parent().width() - 400
         }, {
             duration: 400,
-            complete: (function () {
-                this._lastWidth = this._$container.width()
+            complete: function () {
+                this._lastWidth = this._$container.width();
                 this._$container.css({
                     left: 400,
                     width: 'auto'
-                })
-            }).bind(this)
+                });
+            }.bind(this)
         });
     }
 });

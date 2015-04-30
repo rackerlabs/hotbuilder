@@ -464,8 +464,9 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
 
         $createButton.click(clickCreateDependency);
 
-        $destBoxHTML[1].append($attribute.html($destBox), $value.html($destBox));
-        $sourceBoxHTML[1].append($selector.html($sourceBox))
+        $destBoxHTML[1].append($attribute.html($destBox),
+                               $value.html($destBox));
+        $sourceBoxHTML[1].append($selector.html($sourceBox));
 
         $html.append("<h2>Create Resource Dependency</h2>",
                      $dependencyTypeSelector.html(this),

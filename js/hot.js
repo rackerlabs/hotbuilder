@@ -428,7 +428,6 @@ HotUI.HOT = {};
                             resolver: function (json, properties) {
                                 var type = properties.get('resource_def')
                                                      .get('type');
-                                console.log('resolving resource_def');
                                 type.on('change', function () {
                                     console.log('resource def changed to ' +
                                                 type.get());

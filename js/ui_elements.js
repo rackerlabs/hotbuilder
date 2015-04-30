@@ -1213,7 +1213,6 @@ HotUI.UI = (function (hot) {
 
                 $button.click(function () {
                     $container.fadeOut(250, function () {
-                        console.log('removing ' + self._options.title);
                         $modal.remove();
                     });
 
