@@ -1105,16 +1105,17 @@ HotUI.UI = (function (hot) {
         ]
     });
 
-    ui.ResourcePropertyWrapperSelector = ui.Base.extend({
+    ui.ResourcePropertySelector = ui.Base.extend({
         create: function (resource) {
             var self = ui.Base.create.call(this);
             self._resource = resource;
             return self;
         },
         _doHTML: function () {
-            var properties = this._resource.get('properties'),
-                $html =
-                    $('<div class="ResourcePropertyWrapperSelector"></div>');
+            var backingType = this._resource.get('properties').getBackingType(),
+                properties = backingType.get('properties'),
+                $html = $('<div class="ResourcePropertySelector"></div>'),
+                $select = $('<select></select>');
 
             $html.delegate('p', 'click', function (e) {
                 var $target = $(e.target);
@@ -1122,46 +1123,44 @@ HotUI.UI = (function (hot) {
                 $target.addClass('selected');
             });
 
-            function appendProperties($div, data) {
-                data.each(function (key, value) {
-                    var $label = $('<p>' + key + '<p>'),
-                        $child = $('<div class="property_list"></div>')
-                                     .append($label);
-                    if (value.instanceof(hot.ResourcePropertyWrapper) &&
-                            value.getValue().instanceof(Barricade.Container) &&
-                            !value.getValue()
-                                  .instanceof(hot.IntrinsicFunction)) {
-                        appendProperties($child, value.getValue());
-                    } else if (value.instanceof(Barricade.Container)) {
-                        $label.addClass('disabled');
-                        appendProperties($child, value);
-                    }
+            function createOption(label, value, level) {
+                return Snippy(
+                    '<option value="${value}">${indent}${label}</option>')({
+                        label: label === '*' ? '(new entry)' : label,
+                        value: value,
+                        indent: Array(4 * level + 1).join('&nbsp;')
+                    });
+           }
 
-                    $div.append($child);
+            function getProperties(data, level, prefix) {
+                var result = '';
+
+                data.each(function (key, value) {
+                    var newPrefix;
+
+                    key = value.hasID() ? value.getID() : key;
+                    newPrefix = prefix ? prefix + ',' + key : key;
+
+                    result += createOption(key, newPrefix, level);
+
+                    if (value.instanceof(HotUI.HOT.ResourceProperty_map) ||
+                            value.instanceof(HotUI.HOT.ResourceProperty_list)) {
+                        result += getProperties(value.get('schema'), level + 1,
+                                                newPrefix);
+                    }
                 });
+
+                return result;
             }
 
-            appendProperties($html, properties);
+            $html.append($select.append(getProperties(properties, 0, null)));
 
-            this._html = $html;
+            this._select = $select;
             
             return $html;
         },
         getSelection: function () {
-            var $html = this._html,
-                $selected = $html.find('p.selected').parent(),
-                curLabel,
-                result = [];
-
-            if ($selected.length) {
-                while (!$selected.is($html)) {
-                    curLabel = $selected.children('p').html();
-                    result.unshift(isNaN(+curLabel) ? curLabel : +curLabel);
-                    $selected = $selected.parent();
-                }
-            }
-
-            return result;
+            return this._select.val().split(',');
         }
     });
 

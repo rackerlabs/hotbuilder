@@ -399,7 +399,7 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
             targetResource = this._targetResource,
             getAttribute = HotUI.HOT.GetAttribute.create(),
             value = getAttribute.get('get_attr').get('value'),
-            $html = $('<div></div>'),
+            $html = $('<div class="hb_scroll"></div>'),
             $dependencyTypeSelector = HotUI.UI.Selector.create(
                 ['General', 'Resource', 'Attribute']),
             $sourceBox = HotUI.UI.Snippet.create(
@@ -414,7 +414,7 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
                 $('<div class="create_dependency_button">Create</div>'),
             $attribute = HotUI.UI.ResAttributeSelector.create(targetResource),
             $value = HotUI.UI.SchemalessContainer.create(value),
-            $selector = HotUI.UI.ResourcePropertyWrapperSelector
+            $selector = HotUI.UI.ResourcePropertySelector
                              .create(sourceResource);
 
         function showProps() {
@@ -427,6 +427,7 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
 
         function clickCreateDependency() {
             var path = $selector.getSelection(),
+                newDependency,
                 dependencyType = $dependencyTypeSelector.value();
 
             function getNode(data, path) {
@@ -434,6 +435,11 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
                     if (data.instanceof(
                             HotUI.HOT.ResourcePropertyWrapper)) {
                         data = data.getValue();
+                    }
+
+                    if (path[0] === '*') {
+                        data.push();
+                        path[0] = data.length() - 1;
                     }
 
                     return getNode(data.get(path[0]), path.slice(1));
@@ -445,16 +451,16 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
             if (dependencyType === "General") {
                 sourceResource.get('depends_on')
                               .push(targetResource.getID());
-            } else if (!path.length) {
-                return;
             } else if (dependencyType === "Resource") {
+                newDependency = HotUI.HOT.GetResource.create()
+                                    .set('get_resource', targetResource);
+
                 getNode(sourceResource.get('properties'), path)
-                    .setValue(HotUI.HOT.GetResource.create());
-                getNode(sourceResource.get('properties'), path)
-                    .getValue().set('get_resource', targetResource);
+                    .setValue(newDependency);
             } else {
                 getAttribute.get('get_attr')
                     .set('attribute', $attribute.getSelection());
+
                 getNode(sourceResource.get('properties'), path)
                     .setValue(getAttribute);
             }
@@ -468,9 +474,10 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
                                $value.html($destBox));
         $sourceBoxHTML[1].append($selector.html($sourceBox));
 
-        $html.append("<h2>Create Resource Dependency</h2>",
+        $html.append('<h2>Create Dependency</h2><br>',
+                     'Dependency type: ',
                      $dependencyTypeSelector.html(this),
-                     '<br>',
+                     '<hr>',
                      sourceResource.getID(),
                      '<br>',
                      $sourceBoxHTML,
