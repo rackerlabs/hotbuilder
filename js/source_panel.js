@@ -39,7 +39,8 @@ HotUI.SourcePanel = BaseObject.extend({
             lineNumbers: true,
             lineWrapping: true,
             mode: "yaml",
-            theme: "tomorrow-night-eighties"
+            theme: "tomorrow-night-eighties",
+            tabindex: -1,
         });
 
         templates.on('change', function (type, index, newTemp, oldTemp) {
