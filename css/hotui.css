@@ -131,7 +131,7 @@
 }
 
 #hotui_side_panel_content {
-    bottom: 30px;
+    bottom: 0;
     left: 0;
     position: absolute;
     right: 0;
