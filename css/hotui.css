@@ -55,6 +55,43 @@
     font-weight: bold;
 }
 
+.node > .hb_link,
+.node > .hb_pin {
+    fill: transparent,
+    stroke: #3480c2,
+    stroke-width: 1.5,
+}
+
+.hb_node_buttons > .hb_pin > rect {
+    stroke-width: 1.5;
+    stroke: #3480c2;
+}
+
+.node .hb_node_buttons > .hb_pin > rect,
+.node.hb_fixed .hb_node_buttons > .hb_pin:hover > rect {
+    fill: transparent;
+}
+
+.node .hb_node_buttons > .hb_pin:hover > rect,
+.node.hb_fixed .hb_node_buttons > .hb_pin > rect {
+    fill: #3480c2;
+}
+
+.hb_node_buttons > .hb_pin > .hb_pin_icon * {
+    stroke-width: 8;
+    fill: transparent;
+}
+
+.node .hb_node_buttons > .hb_pin > .hb_pin_icon *,
+.node.hb_fixed .hb_node_buttons > .hb_pin:hover > .hb_pin_icon * {
+    stroke: #3480c2;
+}
+
+.node .hb_node_buttons > .hb_pin:hover > .hb_pin_icon *,
+.node.hb_fixed .hb_node_buttons > .hb_pin > .hb_pin_icon * {
+    stroke: white;
+}
+
 .link {
     stroke-width: 2px;
 }

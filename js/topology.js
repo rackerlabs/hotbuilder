@@ -14,7 +14,7 @@
 
 HotUI.TopologyNode = {};
 
-HotUI.TopologyNode.factory = function (resource, properties) {
+HotUI.TopologyNode.factory = function (resource, resumeFunc, props) {
     var self = this,
         type = resource.getType().toLowerCase(),
         types = {
@@ -32,9 +32,9 @@ HotUI.TopologyNode.factory = function (resource, properties) {
 
     function getInstance(patterns, index) {
         if (index === patterns.length) {
-            return self.Helper.create(resource, properties);
+            return self.Helper.create(resource, resumeFunc, props);
         } else if (type.indexOf(patterns[index]) > -1) {
-            return types[patterns[index]].create(resource, properties);
+            return types[patterns[index]].create(resource, resumeFunc, props);
         } else {
             return getInstance(patterns, index + 1);
         }
@@ -44,11 +44,12 @@ HotUI.TopologyNode.factory = function (resource, properties) {
 };
 
 HotUI.TopologyNode.Base = BaseObject.extend({
-    create: function (resource, properties) {
+    create: function (resource, resumeFunc, properties) {
         if (!properties) {
             properties = {};
         }
 
+        properties._resumeFunc = resumeFunc;
         properties.resource = resource;
         properties.svg = {};
 
@@ -74,6 +75,13 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             i--;
         }
     },
+    setFixed: function (isFixed) {
+        this.fixed = this._fixed = isFixed;
+        this.svg.node.classed('hb_fixed', this.fixed);
+        if(!isFixed) {
+            this._resumeFunc();
+        }
+    },
     iconFile: 'icon-orchestration.svg',
     setNode: function ($g) {
         this.svg.node = $g;
@@ -81,14 +89,17 @@ HotUI.TopologyNode.Base = BaseObject.extend({
     },
     decorateNode: function () {
         var self = this,
-            resImgPad = 8,
+            resImgPad = 15,
             resImgWidth = self.w - resImgPad * 2,
             $g = this.svg.node,
             $label,
             $textContainer,
+            $buttonContainer,
             $linkCreator,
             $linkCreatorLine,
             dragLinkCreator;
+
+        this.setFixed(this._fixed);
 
         dragLinkCreator = d3.behavior.drag()
             .on('dragstart', function () {
@@ -130,7 +141,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             height: resImgWidth,
             width: resImgWidth,
             x: -resImgWidth / 2,
-            y: -this.h/2 + resImgPad,
+            y: -this.h/2 + 25,
             'xlink:href': this.getIconURL()
         });
 
@@ -139,6 +150,45 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
         $textContainer = $label.append('g')
                                .attr('class', 'text_container');
+
+        $buttonContainer = $g.append('g').attr({
+            'class': 'hb_node_buttons',
+            transform: Snippy('translate(${x}, ${y})')({
+                    x: self.w / 2 - 5,
+                    y: -self.h / 2 + 5
+                })
+        })
+
+        $buttonContainer.append('g')
+            .attr({
+                'class': 'hb_link',
+                transform: 'translate(-34, 0)'
+            })
+            .append('rect').attr({
+                width: 15,
+                height: 15,
+                rx: 3,
+                fill: 'transparent',
+                stroke: '#3480c2',
+                'stroke-width': '1.5',
+                x: 0,
+                y: 0
+            });
+
+        $buttonContainer.append('g')
+            .attr({
+                'class': 'hb_pin',
+                transform: 'translate(-15, 0)',
+            }).on('click', function () {
+                self.setFixed(!self._fixed);
+                d3.event.stopPropagation();
+            }).html(
+                "<rect width='15' height='15' x='0' y='0' rx='3' />" +
+                "<svg xmlns='http://www.w3.org/2000/svg' class='hb_pin_icon' " +
+                        "width='15' height='15' viewBox='0 0 100 100'>" +
+                    "<rect width='26' height='45' x='37' y='15' />" +
+                    "<path d='M 25 60 H 75 M 50 60 V 90 M 57 15 V 60'/>" +
+                "</svg>");
 
         $linkCreator =
             $g.append('circle').attr({
@@ -271,6 +321,8 @@ HotUI.Topology = BaseObject.extend({
                                .on('tick', function (e) { self._tick(e); })
                                .start();
 
+        self._force.drag().on('drag', function (d) { d.setFixed(true); });
+
         self._node = self._topG.selectAll('.node');
         self._link = self._topG.selectAll('.link');
         self._updatedResourceCB = function () { self.updatedResource(); };
@@ -333,9 +385,15 @@ HotUI.Topology = BaseObject.extend({
     _decorateNodes: function (nodesIn) {
         var self = this,
             newG = nodesIn.append('g')
-                .attr('class', 'node')
-                .attr('cx', function (d) { return d.x; })
-                .attr('cy', function (d) { return d.y; })
+                .attr({
+                    'class': 'node',
+                    cx: function (d) { return d.x; },
+                    cy: function (d) { return d.y; }
+                })
+                .on('dblclick', function (d) {
+                    d.setFixed(false);
+                    d3.event.stopPropagation();
+                })
                 .call(this._force.drag)
                 .on('mousedown', function () {
                     d3.event.stopPropagation();
@@ -346,7 +404,7 @@ HotUI.Topology = BaseObject.extend({
                     }
                 })
                 .on('mouseenter', function () {
-                    this.parentNode.appendChild(this);
+                    this.parentNode.appendChild(this); // Brings node to front
                 });
 
         newG.each(function (d) {
@@ -446,7 +504,10 @@ HotUI.Topology = BaseObject.extend({
         }
 
         this._node.attr('transform', function (d) {
-            return 'translate(' + d.x + ', ' + d.y + ')';
+            return Snippy('translate(${x},${y})')({
+                x: d.x.toFixed(10),
+                y: d.y.toFixed(10)
+            });
         });
 
         this._link.attr('transform', function (d) {
@@ -473,12 +534,14 @@ HotUI.Topology = BaseObject.extend({
         });
     },
     _tieredTick: function (e) {
-        this._nodes.forEach(function (d) {
+        var freeNodes = this._nodes.filter(function (d) { return !d.fixed; });
+
+        freeNodes.forEach(function (d) {
             d.x += (d.focus.x - d.x) * e.alpha * d.focusForce.x;
             d.y += (d.focus.y - d.y) * e.alpha * d.focusForce.y;
         });
 
-        this._nodes.forEach(function (d) {
+        freeNodes.forEach(function (d) {
             var scale = 1 - Math.min(1, e.alpha * 10),
                 coord;
 
@@ -488,7 +551,7 @@ HotUI.Topology = BaseObject.extend({
             }
         });
 
-        this._nodes.forEach(this._collide(this._nodes, 0.5));
+        freeNodes.forEach(this._collide(freeNodes, 0.5));
     },
     _webTick: function () {},
     _onLinkCreatorDrop: function (x, y, srcNode) {
@@ -568,6 +631,10 @@ HotUI.Topology = BaseObject.extend({
             positions = this._getSavedPositions(),
             droppedNode;
 
+        function resumeFunc() {
+            self._force.resume();
+        }
+
         this._nodes = this._resources.toArray().map(function (resource) {
             var oldNode = nodeMap[resource.getID()],
                 newNode;
@@ -576,7 +643,7 @@ HotUI.Topology = BaseObject.extend({
                 oldNode.resource = resource;
                 return oldNode;
             } else if (self._nextResourcePt) {
-                newNode = HotUI.TopologyNode.factory(resource, {
+                newNode = HotUI.TopologyNode.factory(resource, resumeFunc, {
                     x: self._nextResourcePt.x,
                     y: self._nextResourcePt.y
                 });
@@ -585,12 +652,12 @@ HotUI.Topology = BaseObject.extend({
                 droppedNode = newNode;
                 return newNode;
             } else if (positions.hasOwnProperty(resource.getID())) {
-                return HotUI.TopologyNode.factory(resource, {
+                return HotUI.TopologyNode.factory(resource, resumeFunc, {
                     x: positions[resource.getID()].x,
                     y: positions[resource.getID()].y
                 });
             } else {
-                return HotUI.TopologyNode.factory(resource, {
+                return HotUI.TopologyNode.factory(resource, resumeFunc, {
                     x: (Math.random() - 0.5) * self._width,
                     y: (Math.random() - 0.5) * self._height,
                 });
