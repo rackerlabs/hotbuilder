@@ -31,7 +31,7 @@
     background: #a6d0ff url(/static/hotui/img/hexagons.svg) repeat;
     bottom: 0;
     cursor: move;
-    left: 400px;
+    left: 0;
     position:absolute;
     right: 0;
     top: 0;
@@ -701,7 +701,6 @@
 .hb_link_create_panel.get_resource > .hb_get_resource {
     display: block;
 }
-
 
 .hb_link_create_panel .hb_create_dependency {
     background-color: #3480c2;

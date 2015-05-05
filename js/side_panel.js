@@ -17,27 +17,53 @@ HotUI.SidePanel = BaseObject.extend({
         var self = this.extend({
                 _templates: templates,
                 _isHidden: false,
+                _width: $container.width(),
                 _$container: $container,
                 _$content: $content,
-                _$navbar: $container.children('.hotui_side_panel_nav')
             });
-
-        self._$navbar.children('.nav_button').eq(0).trigger('click');
-
         return self;
     },
-    _displayPanel: function (panel) {
+    _changeContent: function ($html) {
         this._$content.scrollTop(0);
         this._$content.empty();
-        this._$content.append(panel.html());
+        this._$content.append($html);
+    },
+    _displayPanel: function (panel, shouldAnimate) {
+        if (shouldAnimate !== false) {
+            this.hide(function () {
+                this._changeContent(panel.html());
+                this._$container.delay(100);
+                this.show();
+            }.bind(this));
+        } else {
+            this._changeContent(panel.html());
+        }
     },
     _onResourceDrop: function () {},
+    hide: function (onComplete) {
+        this._$container.animate({
+            left: -this._width,
+            opacity: 0
+        }, {
+            duration: 300,
+            easing: 'linear',
+            complete: function () {
+                this._$container.css({
+                    opacity: 1
+                });
+                onComplete();
+            }.bind(this)
+        });
+    },
     setTemplate: function (newTemplate) {
         this._template = newTemplate;
     },
     setOnResourceDrop: function (callback) {
         this._onResourceDrop = callback;
         return this;
+    },
+    show: function () {
+        this._$container.animate({left: 0}, {duration: 500});
     },
     showHome: function () {
         var self = this,
