@@ -95,37 +95,25 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             $label,
             $textContainer,
             $buttonContainer,
-            $linkCreator,
+            $linkButton,
             $linkCreatorLine,
             dragLinkCreator;
 
-        this.setFixed(this._fixed);
-
         dragLinkCreator = d3.behavior.drag()
             .on('dragstart', function () {
+                $g.classed('hb_linking', true);
                 d3.event.sourceEvent.stopPropagation();
             })
             .on('drag', function () {
-                $linkCreator.attr({cx: d3.event.x, cy: d3.event.y});
-                $linkCreatorLine.attr({x2: d3.event.x, y2: d3.event.y});
+                var pos = d3.mouse($linkButton[0][0]);
+                $linkCreatorLine.attr({x2: pos[0], y2: pos[1]});
             })
             .on('dragend', function (d) {
-                var creatorX = +$linkCreator.attr('cx'),
-                    creatorY = +$linkCreator.attr('cy');
-
-                $linkCreator.attr({cx: self.w / 2, cy: self.h / 2});
-                $linkCreatorLine.attr({x2: 0, y2: 0});
-                self._onLinkCreatorDrop(creatorX + d.x, creatorY + d.y, self);
+                var pos = d3.mouse($g[0][0]);
+                $g.classed('hb_linking', false);
+                $linkCreatorLine.attr({x2: 7.5, y2: 7.5});
+                self._onLinkCreatorDrop(d.x + pos[0], d.y + pos[1], self);
             });
-
-        $linkCreatorLine = $g.append('line').attr({
-            x1: 0,
-            x2: 0,
-            y1: 0,
-            y2: 0,
-            stroke: '#3480c2',
-            'stroke-width': '2px'
-        });
 
         $g.append('rect').attr({
             'class': 'hb_bg',
@@ -159,21 +147,26 @@ HotUI.TopologyNode.Base = BaseObject.extend({
                 })
         })
 
-        $buttonContainer.append('g')
+        $linkButton = $buttonContainer.append('g')
             .attr({
                 'class': 'hb_link',
                 transform: 'translate(-34, 0)'
-            })
-            .append('rect').attr({
-                width: 15,
-                height: 15,
-                rx: 3,
-                fill: 'transparent',
-                stroke: '#3480c2',
-                'stroke-width': '1.5',
-                x: 0,
-                y: 0
-            });
+            }).html(
+                "<rect width='15' height='15' x='0' y='0' rx='3' />" +
+                "<svg xmlns='http://www.w3.org/2000/svg' " +
+                        "class='hb_link_icon' " +
+                        "width='15' height='15' viewBox='0 0 100 100'>" +
+                    "<g transform='translate(78, 0)rotate(60)'>" +
+                        "<rect width='31' height='55' x='6' y='11' rx='15' />" +
+                        "<rect width='31' height='55'" +
+                              "x='20' y='34' rx='15' />" +
+                    "</g>" +
+                "</svg>"
+            )
+            .on('click', function () { d3.event.stopPropagation() })
+            .call(dragLinkCreator);
+
+        $linkCreatorLine = $linkButton.append('line').attr({x1: 7.5, y1: 7.5});
 
         $buttonContainer.append('g')
             .attr({
@@ -189,23 +182,6 @@ HotUI.TopologyNode.Base = BaseObject.extend({
                     "<rect width='26' height='45' x='37' y='15' />" +
                     "<path d='M 25 60 H 75 M 50 60 V 90 M 57 15 V 60'/>" +
                 "</svg>");
-
-        $linkCreator =
-            $g.append('circle').attr({
-                    r: 5,
-                    cx: self.w / 2,
-                    cy: self.h / 2,
-                    fill: 'white',
-                    stroke: '#3480C2',
-                    'stroke-width': '2px'
-                })
-                .on('mouseenter', function () {
-                    $linkCreator.attr('fill', '#3480C2');
-                })
-                .on('mouseleave', function () {
-                    $linkCreator.attr('fill', 'white');
-                })
-                .call(dragLinkCreator);
 
         $textContainer.append('text').attr({
             'class': 'resource_name',
@@ -230,6 +206,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             $textContainer = $label.selectAll('.text_container');
 
         this.setNameOnElement($g.selectAll('.resource_name')[0][0]);
+        this.setFixed(this._fixed);
 
         $g.selectAll('.resource_type')
             .text(this.resource.getType().split('::')[2]);
