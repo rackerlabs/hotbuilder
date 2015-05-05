@@ -473,12 +473,6 @@
     display: none;
 }
 
-.create_dependency_button {
-    background-color: green;
-    height: 30px;
-    width: 100px;
-}
-
 .use_function_button {
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 7px;
@@ -690,4 +684,31 @@
 
 /* Template */
 .hb_template_panel {
+}
+
+/* Link Creator */
+.hb_link_create_panel > .hb_depends_on,
+.hb_link_create_panel > .hb_properties,
+.hb_link_create_panel > .hb_attributes,
+.hb_link_create_panel > .hb_get_resource {
+    display: none;
+}
+
+.hb_link_create_panel.depends_on > .hb_depends_on,
+.hb_link_create_panel.get_resource > .hb_properties,
+.hb_link_create_panel.get_attr > .hb_properties,
+.hb_link_create_panel.get_attr > .hb_attributes,
+.hb_link_create_panel.get_resource > .hb_get_resource {
+    display: block;
+}
+
+
+.hb_link_create_panel .hb_create_dependency {
+    background-color: #3480c2;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    margin-left: 3px;
+    padding: 2px 8px;
 }

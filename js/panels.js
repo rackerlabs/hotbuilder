@@ -392,43 +392,41 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
         var self = HotUI.Panel.Base.create.call(this);
         self._sourceResource = sourceResource;
         self._targetResource = targetResource;
+        self._dependencyType = ko.observable(self._dependencyTypes[0]);
         return self;
     },
+    _dependencyTypes: [
+        {label: 'General', value: 'depends_on'},
+        {label: 'Resource', value: 'get_resource'},
+        {label: 'Attribute', value: 'get_attr'}
+    ],
     _doHTML: function () {
-        var sourceResource = this._sourceResource,
+        var self = this,
+            sourceResource = this._sourceResource,
             targetResource = this._targetResource,
+            sourceIDHTML = '<strong>' + sourceResource.getID() + '</strong>',
+            targetIDHTML = '<strong>' + targetResource.getID() + '</strong>',
             getAttribute = HotUI.HOT.GetAttribute.create(),
             value = getAttribute.get('get_attr').get('value'),
-            $html = $('<div class="hb_scroll"></div>'),
-            $dependencyTypeSelector = HotUI.UI.Selector.create(
-                ['General', 'Resource', 'Attribute']),
-            $sourceBox = HotUI.UI.Snippet.create(
-                '<div data-bind="visible: showProps()"></div>',
-                {showProps: showProps}),
-            $sourceBoxHTML = $sourceBox.html(this),
-            $destBox = HotUI.UI.Snippet.create(
-                '<div data-bind="visible: showAttrs()"></div>',
-                {showAttrs: showAttrs}),
-            $destBoxHTML = $destBox.html(this),
+            $html = $('<div class="hb_scroll hb_link_create_panel" ' +
+                           'data-bind="css: _dependencyType().value"></div>'),
+            $dependencyTypeSelector =
+                '<select data-bind="options: _dependencyTypes, ' +
+                                   'optionsText: \'label\', ' +
+                                   'value: _dependencyType"></select>',
+            $sourceBox = $('<div class="hb_properties"></div>'),
+            $destBox = $('<div class="hb_attributes"></div>'),
             $createButton =
-                $('<div class="create_dependency_button">Create</div>'),
+                $('<div class="hb_create_dependency">Create Dependency</div>'),
             $attribute = HotUI.UI.ResAttributeSelector.create(targetResource),
             $value = HotUI.UI.SchemalessContainer.create(value),
             $selector = HotUI.UI.ResourcePropertySelector
                              .create(sourceResource);
 
-        function showProps() {
-            return $dependencyTypeSelector.value() !== 'General';
-        }
-
-        function showAttrs() {
-            return $dependencyTypeSelector.value() === 'Attribute';
-        }
-
         function clickCreateDependency() {
             var path = $selector.getSelection(),
                 newDependency,
-                dependencyType = $dependencyTypeSelector.value();
+                dependencyType = self._dependencyType().value;
 
             function getNode(data, path) {
                 if (path.length) {
@@ -448,10 +446,11 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
                 }
             }
 
-            if (dependencyType === "General") {
+            console.log(dependencyType);
+            if (dependencyType === 'depends_on') {
                 sourceResource.get('depends_on')
                               .push(targetResource.getID());
-            } else if (dependencyType === "Resource") {
+            } else if (dependencyType === 'get_resource') {
                 newDependency = HotUI.HOT.GetResource.create()
                                     .set('get_resource', targetResource);
 
@@ -470,21 +469,24 @@ HotUI.Panel.LinkCreate = HotUI.Panel.Base.extend({
 
         $createButton.click(clickCreateDependency);
 
-        $destBoxHTML[1].append($attribute.html($destBox),
-                               $value.html($destBox));
-        $sourceBoxHTML[1].append($selector.html($sourceBox));
+        $sourceBox.append(sourceIDHTML + '\'s property: <br>',
+                          $selector.html(this),
+                          '<br>will receive<br><br>');
+
+        $destBox.append(targetIDHTML + '\'s attribute: <br>',
+                        $attribute.html(this),
+                        $value.html(this));
 
         $html.append('<h2>Create Dependency</h2><br>',
                      'Dependency type: ',
-                     $dependencyTypeSelector.html(this),
+                     $dependencyTypeSelector,
                      '<hr>',
-                     sourceResource.getID(),
-                     '<br>',
-                     $sourceBoxHTML,
-                     '<br>',
-                     'depends on <br>' + targetResource.getID(),
-                     '<br>',
-                     $destBoxHTML,
+                     '<div class="hb_depends_on">' + sourceIDHTML +
+                        ' will depend on ' + targetIDHTML + '</div>',
+                     $sourceBox,
+                     $destBox,
+                     '<div class="hb_get_resource">' + targetIDHTML + '\'s ' +
+                         'resource ID</div>',
                      '<br>',
                      $createButton);
 
