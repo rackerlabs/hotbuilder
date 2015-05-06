@@ -40,6 +40,14 @@
 .node {
 }
 
+.node.hb_can_connect_to_good > .hb_bg {
+    fill: #cfc;
+}
+
+.node.hb_can_connect_to_hover > .hb_bg {
+    fill: #cef;
+}
+
 .node text {
     font-size: 7px;
 }

@@ -200,8 +200,12 @@ HotUI.App = BaseObject.extend({
         topology.setData(template().get('resources'));
         topology.setOnResourceClick(onResourceClick);
         topology.setOnLinkCreatorCreate(function (source, target) {
-            sidePanel.showLinkCreatePanel(source, target);
-            navbar.clearActiveTab();
+            if (source.canConnectTo(target)) {
+                source.connectTo(target);
+            } else {
+                sidePanel.showLinkCreatePanel(source, target);
+                navbar.clearActiveTab();
+            }
         });
         navbar.clickTab(0);
 

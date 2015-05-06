@@ -45,6 +45,8 @@ HotUI.TopologyNode.factory = function (resource, resumeFunc, props) {
 
 HotUI.TopologyNode.Base = BaseObject.extend({
     create: function (resource, resumeFunc, properties) {
+        var self;
+
         if (!properties) {
             properties = {};
         }
@@ -53,7 +55,9 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         properties.resource = resource;
         properties.svg = {};
 
-        return this.extend(properties);
+        self = this.extend(properties);
+        Barricade.Observable.call(self);
+        return self;
     },
     _iconBaseURL: '/static/hotui/img/',
     h: 110,
@@ -63,6 +67,13 @@ HotUI.TopologyNode.Base = BaseObject.extend({
     focusForce: {x: 0.5, y: 0.5},
     getIconURL: function () {
         return this._iconBaseURL + this.iconFile;
+    },
+    canConnectTo: function (d) {
+        return this.resource.canConnectTo(d.resource);
+    },
+    containsPoint: function (p) {
+        return Math.abs(p.x - this.x) < this.w / 2 &&
+               Math.abs(p.y - this.y) < this.h / 2;
     },
     setNameOnElement: function ($el) {
         var name = this.resource.getID(),
@@ -103,16 +114,23 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             .on('dragstart', function () {
                 $g.classed('hb_linking', true);
                 d3.event.sourceEvent.stopPropagation();
+                self.emit('linkCreateDragStart', self);
             })
-            .on('drag', function () {
-                var pos = d3.mouse($linkButton[0][0]);
+            .on('drag', function (d) {
+                var pos = d3.mouse($linkButton[0][0]),
+                    gPos = d3.mouse($g[0][0]);
                 $linkCreatorLine.attr({x2: pos[0], y2: pos[1]});
+                self.emit('linkCreateDrag', {
+                    x: d.x + gPos[0],
+                    y: d.y + gPos[1]
+                });
             })
             .on('dragend', function (d) {
                 var pos = d3.mouse($g[0][0]);
                 $g.classed('hb_linking', false);
                 $linkCreatorLine.attr({x2: 7.5, y2: 7.5});
-                self._onLinkCreatorDrop(d.x + pos[0], d.y + pos[1], self);
+                self.emit(
+                    'linkCreateDragEnd', d.x + pos[0], d.y + pos[1], self);
             });
 
         $g.append('rect').attr({
@@ -386,7 +404,17 @@ HotUI.Topology = BaseObject.extend({
 
         newG.each(function (d) {
             d.setNode(d3.select(this));
-            d.setOnLinkCreatorDrop(function (x, y, srcNode) {
+            d.on('linkCreateDragStart', function (srcNode) {
+                self._node.classed('hb_can_connect_to_good', function (n) {
+                    return n !== d && d.canConnectTo(n);
+                });
+            }).on('linkCreateDrag', function (p) {
+                self._node.classed('hb_can_connect_to_hover', function (n) {
+                    return n !== d && n.containsPoint(p);
+                });
+            }).on('linkCreateDragEnd', function (x, y, srcNode) {
+                self._node.classed(
+                    'hb_can_connect_to_good hb_can_connect_to_hover', false);
                 self._onLinkCreatorDrop(x, y, srcNode);
             });
         });
@@ -416,9 +444,6 @@ HotUI.Topology = BaseObject.extend({
             backgroundSize: 50 * scale,
             backgroundPosition: Snippy('${0}px ${1}px')(translate)
         });
-
-        // updates label backgrounds because text changes size
-        this._nodes.forEach(function (n) { n.updateNode(); });
     },
     _collide: function (nodes, alpha) {
         var quadtree = d3.geom.quadtree(nodes),
@@ -535,10 +560,7 @@ HotUI.Topology = BaseObject.extend({
         var self = this;
 
         this._nodes.forEach(function (n) {
-            var xDist = Math.abs(x - n.x),
-                yDist = Math.abs(y - n.y);
-
-            if (xDist < n.w / 2 && yDist < n.h / 2 && n !== srcNode) {
+            if (n !== srcNode && n.containsPoint({x: x, y: y})) {
                 self._onLinkCreatorCreate(srcNode.resource, n.resource);
             }
         });

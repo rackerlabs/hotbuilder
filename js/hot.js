@@ -636,7 +636,14 @@ HotUI.HOT = {};
         'resource_facade': {'@type': String}
     });
 
-    hot.ResourceProperties = Barricade.ImmutableObject.extend({});
+    hot.ResourceProperties = Barricade.ImmutableObject.extend({
+        canConnectTo: function (typeName) {
+            return typeName in this._automaticConnections;
+        },
+        getConnector: function (typeName) {
+            return this._automaticConnections[typeName];
+        }
+    });
 
     hot.ResourcePropertiesFactory = function (json, parameters, type) {
         var propertyClass = hot['ResourceProperties_' + type],
@@ -694,9 +701,17 @@ HotUI.HOT = {};
             }
             return getIntrinsics(this.getProperties());
         },
-        connectTo: function (resource) {
-            this.getProperties().connectTo(resource);
-            resource.getProperties().connectTo(this);
+        canConnectTo: function (resource, checkBothWays) {
+            return this.getProperties().canConnectTo(resource.getType()) ||
+                (checkBothWays !== false && resource.canConnectTo(this, false));
+        },
+        connectTo: function (res, tryBothWays) {
+            var connector = this.getProperties().getConnector(res.getType());
+            if (connector) {
+                connector(this, res);
+            } else if (tryBothWays !== false) {
+                res.connectTo(this, false);
+            }
         },
         _docsBaseURL: "http://docs.rs-heat.com/raxdox/",
         getDocsLink: function () {
@@ -990,7 +1005,9 @@ function createHOT(resourceTypeObj) {
             hot.ResourceProperties.extend({
                     getBackingType: function () {
                         return resourceType;
-                    }
+                    },
+                    _automaticConnections:
+                        HOTUI_RESOURCE_CONNECTIONS[resourceType.getID()] || {}
                 },
                 resourceType.getSchema());
     });
