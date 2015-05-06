@@ -29,8 +29,7 @@ HotUI.App = BaseObject.extend({
                                         $("#hotui_side_panel_content"),
                                         $("#hotui_side_panel > .close_button")),
             sourcePanel = HotUI.SourcePanel.create(templates,
-                                                   $("#hotui_source_panel")),
-            untitledResources = 0;
+                                                   $("#hotui_source_panel"));
 
         function loadTemplateFromURL(startingURL) {
             var url = ko.observable(startingURL || '');
@@ -166,14 +165,20 @@ HotUI.App = BaseObject.extend({
         }
 
         function addResource(x, y, typeIn) {
-            var pt = topology.documentToSVGCoords(x, y);
+            var pt = topology.documentToSVGCoords(x, y),
+                resources = template().get('resources'),
+                resID = typeIn.replace(/::/g, ''),
+                i = 1;
 
-            untitledResources++;
+            if (resources.getByID(resID)) {
+                while (resources.getByID(resID + i)) {
+                    i++;
+                }
+                resID += i;
+            }
 
             topology.aboutToAddResource(pt.x, pt.y);
-            template().get('resources').push({type: typeIn},
-                                           {id: typeIn.replace(/::/g, '') +
-                                                untitledResources});
+            resources.push({type: typeIn}, {id: resID});
         }
 
         function onResourceClick(resource) {
