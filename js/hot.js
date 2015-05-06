@@ -269,12 +269,8 @@ HotUI.HOT = {};
                 },
                 'allowed_values': function (constraint) {
                     return function (val) {
-                        console.log((constraint.indexOf(val) > -1) ||
-                            ('Value must be one of ' +
-                             constraint.join(', ')));
                         return (constraint.indexOf(val) > -1) ||
-                            ('Value must be one of ' +
-                             constraint.join(', '));
+                            ('Value must be one of ' + constraint.join(', '));
                     };
                 },
                 'allowed_pattern': function (constraint) {
@@ -289,16 +285,14 @@ HotUI.HOT = {};
                 }
             };
 
-        function getConstraint(constraintObj) {
-            for (var t in types) {
-                if (constraintObj.hasOwnProperty(t)) {
-                    return types[t](constraintObj[t]);
-                }
+        for (var t in types) {
+            if (constraintObj.hasOwnProperty(t)) {
+                return types[t](constraintObj[t]);
             }
-
-            console.log('Constraint type not found: ', constraintObj);
-            return function () { return true; };
         }
+
+        console.log('Constraint type not found: ', constraintObj);
+        return function () { return true; };
     }
 
     hot.ResourcePropertyFactory = function (json, parameters) {

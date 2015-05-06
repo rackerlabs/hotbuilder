@@ -289,7 +289,7 @@ HotUI.UI = (function (hot) {
         create: function (data, writeFunc) {
             var self = ui.Base.create.call(this),
                 dummy = ko.observable(),
-                validDummy = ko.observable();
+                errorTextDummy = ko.observable();
 
             self.value = ko.computed({
                 read: function () {
@@ -301,23 +301,26 @@ HotUI.UI = (function (hot) {
                 }
             });
 
-            self.valid = ko.computed({
+            self.errorText = ko.computed({
                 read: function () {
-                    validDummy();
+                    errorTextDummy();
                     return data.getError();
                 }
             });
 
             data.on('change', function () {dummy.notifySubscribers();});
             data.on('validation', function () {
-                validDummy.notifySubscribers();
+                errorTextDummy.notifySubscribers();
             });
 
             return self;
         },
         _doHTML: function () {
-            return $('<div><p class="hb_invalid" data-bind="text: valid">' +
-                     '</p></div>');
+            return $(
+                '<div><p class="hb_error_message" ' +
+                    'data-bind="css: { hb_invalid: errorText() !== \'\' }, ' +
+                               'text: errorText">' +
+                 '</p></div>');
         }
     });
 

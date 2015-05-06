@@ -543,9 +543,13 @@
     width: 100%;
 }
 
-#hotui_side_panel .hb_invalid {
+#hotui_side_panel .hb_error_message {
     color: red;
     display: none;
+}
+
+#hotui_side_panel .hb_error_message.hb_invalid {
+    display: block;
 }
 
 .hb_accordion > .hb_section > .hb_label {
