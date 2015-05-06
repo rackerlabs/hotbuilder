@@ -685,7 +685,7 @@ HotUI.UI = (function (hot) {
 
             data.on('change', function () {
                 innerControl = ui.FormControl(data.getValue(), parameters);
-                $element.empty().append(innerControl.html(this));
+                $element.empty().append(innerControl.html());
             });
 
             return self;
