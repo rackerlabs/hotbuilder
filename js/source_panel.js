@@ -19,7 +19,9 @@ HotUI.SourcePanel = BaseObject.extend({
                 _templates: templates,
                 _visible: ko.observable(false),
                 _expanded: ko.observable(false),
-                _lastWidth: this._normalWidth
+                _lastWidth: this._normalWidth,
+                _isClean: ko.observable(true),
+                _hasFocus: ko.observable(false)
             }),
             updateYAML = self._updateYAML.bind(self),
             $textarea = $('<textarea></textarea>');
@@ -27,9 +29,13 @@ HotUI.SourcePanel = BaseObject.extend({
         $container.append($textarea,
             '<div class="hb_side_buttons" ' +
                  'data-bind="css: {hb_invisible: !_visible()}">' +
-                '<div class="hb_expand" data-bind="text: _getExpandText(), ' +
-                                            'click: toggleExpand"></div>' +
-                '<div class="hb_save" data-bind="click: updateTemplate">' +
+                '<div class="hb_expand" ' +
+                     'data-bind="text: _getExpandText(), ' +
+                                'click: toggleExpand"></div>' +
+                '<div class="hb_save" ' +
+                     'data-bind="click: updateTemplate,' +
+                                'dirtyEditor: !_isClean() && !_hasFocus(),'+
+                                'css: {hb_dirty: !_isClean()}">'+
                     'Update Topology</div>' +
                 '<div class="hb_showhide" ' +
                      'data-bind="text: _getShowText(), ' +
@@ -42,6 +48,18 @@ HotUI.SourcePanel = BaseObject.extend({
             mode: "yaml",
             theme: "tomorrow-night-eighties",
             tabindex: -1,
+        });
+
+        self._cm.on('focus', function () {
+            self._hasFocus(true);
+        });
+
+        self._cm.on('blur', function () {
+            self._hasFocus(false);
+        });
+
+        self._cm.on('change', function () {
+            self._isClean(self._cm.isClean());
         });
 
         templates.on('change', function (type, index, newTemp, oldTemp) {
@@ -65,6 +83,8 @@ HotUI.SourcePanel = BaseObject.extend({
             data: {json: JSON.stringify(this.template().toJSON(true))},
             success: function (data) {
                 this._cm.setValue(data);
+                this._cm.markClean();
+                this._isClean(this._cm.isClean());
             }.bind(this)
         });
     },

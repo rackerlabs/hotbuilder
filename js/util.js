@@ -65,3 +65,20 @@ ko.bindingHandlers.foreach2 = { // Creates $p, much shorter than $parent
         return ko.bindingHandlers.foreach.update(el, va, ab, vm, bindContext);
     }
 };
+
+ko.bindingHandlers.dirtyEditor = {
+    update: function (element, valueAccessor) {
+        var shouldDisplay = valueAccessor();
+        if (shouldDisplay) {
+            $('.notifyjs-wrapper').show();
+            $(element).notify("Please save template!", {
+                    elementPosition: "bottom center",
+                    autoHide: false,
+                    className: 'error',
+                    showAnimation: 'slideDown'
+            });
+        } else {
+            $('.notifyjs-wrapper').hide();
+        }
+    }
+};
