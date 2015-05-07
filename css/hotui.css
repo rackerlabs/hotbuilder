@@ -593,7 +593,6 @@
 }
 
 .hb_home > .hb_add_resource {
-    height: 60%;
     padding: 5px 10px;
 }
 
@@ -607,7 +606,6 @@
 
 .hb_home > .hb_ref_arch {
     border-top: 1px solid #e0e0e0;
-    height: 40%;
     padding: 5px 10px;
 }
 
@@ -631,7 +629,15 @@
 }
 
 .hb_resource_org {
+    border-top: 1px solid #b0b0b0;
     margin-top: 10px;
+    padding-top: 10px;
+}
+
+.hb_resource_org:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
 }
 
 .hb_resource_org > h3 {
