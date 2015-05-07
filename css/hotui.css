@@ -515,28 +515,22 @@
     color: red;
 }
 
-#hotui_side_panel > .background {
-    height: 100%;
-    opacity: 0.95;
-    position: absolute;
-    width: 100%;
-}
-
-#hotui_side_panel > .close_button {
-    color: black;
+#hotui_side_panel > .hb_collapse_button {
+    background-color: #f0f0f0;
+    border-bottom-right-radius: 6px;
     cursor: pointer;
     font-weight: bold;
-    height: 20px;
-    opacity: 0.7;
+    height: 23px;
+    padding-right: 2px;
     position: absolute;
-    right: 0;
+    right: -23px;
     text-align: center;
     top: 0;
-    width: 25px;
+    width: 23px;
 }
 
-#hotui_side_panel > .close_button:hover {
-    opacity: 1;
+#hotui_side_panel > .hb_collapse_button:hover {
+    color: #3480c2;
 }
 
 #hotui_side_panel .StringControl {
