@@ -445,12 +445,10 @@ HotUI.HOT = {};
         }
     }, {
         '@type': Object,
-
         'attributes': {
             '@type': Object,
             '?': {'@class': hot.ResourceAttribute}
         },
-
         'properties': {
             '@type': Object,
             '?': {
@@ -875,6 +873,7 @@ HotUI.HOT = {};
         },
         'default': {
             '@type': Object,
+            '@required': false,
             // default can be various types, so wrap it in an object to
             // make Barricade happy
             '@inputMassager': function (json) {
@@ -979,11 +978,70 @@ HotUI.HOT = {};
             '?': {'@class': hot.Output}
         }
     });
+
+    hot.NestedTemplate = Barricade.ImmutableObject.extend({
+        getSchema: function () {
+            function getActualType(type) {
+                var types = {
+                    json: 'map',
+                    comma_delimited_list: 'list'
+                };
+                return types[type] || type;
+            }
+
+            return {
+                properties: this.get('parameters').toArray().reduce(
+                    function (objOut, param) {
+                        objOut[param.getID()] = {
+                            description: param.get('description').get(),
+                            type: getActualType(param.get('type').get())
+                        };
+                        return objOut;
+                    }, {}),
+                attributes: this.get('outputs').toArray().reduce(
+                    function (objOut, output) {
+                        objOut[output.getID()] = {
+                            description: output.get('description').get()
+                        };
+                        return objOut;
+                    }, {})
+            };
+        }
+    }, {
+        '@type': Object,
+
+        'heat_template_version': {'@type': String},
+        'description': {'@type': String, '@required': false},
+        'parameter_groups': {'@type': Array, '@required': false},
+        'resources': {'@type': Object},
+        'parameters': {
+            '@type': Object,
+            '?': {'@class': hot.Parameter}
+        },
+        'outputs': {
+            '@type': Object,
+            '@required': false,
+            '?': {
+                '@class': hot.Output.extend({}, {
+                    'value': {
+                        '@class': hot.Primitive,
+                        '@factory': hot.Primitive.Factory
+                    }
+                })
+            }
+        }
+    });
 }());
 
 function createHOT(resourceTypeObj) {
     var hot = HotUI.HOT,
-        allResourceTypes;
+        allResourceTypes,
+        nestedTemplates = HOTUI_NESTED_TEMPLATES;
+
+    Object.keys(nestedTemplates).forEach(function (name) {
+        resourceTypeObj[name] =
+            hot.NestedTemplate.create(nestedTemplates[name]).getSchema();
+    });
 
     hot.resourceTypes = hot.ResourceTypes.create(resourceTypeObj);
 
