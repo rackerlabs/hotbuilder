@@ -148,7 +148,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
         }
 
         $search.on('change keyup input paste', function () {
-            var val = $search.val();
+            var val = $search.val().toLowerCase();
             $accordion.openSection(0);
 
             function filterResources($el) {
