@@ -127,7 +127,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
         }
 
         function getSection(resourceType, sectionNum) {
-            return resourceType.getID().split('::')[sectionNum];
+            return resourceType.split('::')[sectionNum];
         }
 
         function mapSectionFactory(sectionNum) {
@@ -141,7 +141,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             return Snippy(
                 '<div class="resource_draggable" type="${type}">' +
                 '<div></div>${label}</div>')({
-                    type: resType.getID(),
+                    type: resType,
                     label: label || getSection(resType, 2)
             });
 
@@ -195,18 +195,20 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             '<div>' +
             '<h4>Common Resources</h4>' +
             commonResources.map(function (res) {
-                return getDraggableHTML(
-                    HotUI.HOT.resourceTypes.getByID(res.resource), res.label);
+                return getDraggableHTML(res.resource, res.label);
             }).join('') + '</div>');
 
         $html.append($commonResources);
 
-        resMap = HotUI.HOT.resourceTypes.toArray()
-                                        .reduce(mapSectionFactory(0), {});
+        resMap = Object.keys(HotUI.HOT.ResourceProperties.Normal)
+                       .reduce(mapSectionFactory(0), {});
 
         Object.keys(resMap).forEach(function (key) {
             resMap[key] = resMap[key].reduce(mapSectionFactory(1), {});
         });
+
+        resMap.Custom =
+            {Custom: Object.keys(HotUI.HOT.ResourceProperties.Custom).sort()};
 
         resMapKeys = keyOrder.concat(
             Object.keys(resMap).sort().filter(function (k) {
