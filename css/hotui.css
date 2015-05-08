@@ -251,7 +251,9 @@
     z-index: 10;
 }
 
-#hotui_source_panel > .hb_side_buttons > * {
+#hotui_source_panel > .hb_side_buttons > .hb_showhide,
+#hotui_source_panel > .hb_side_buttons > .hb_save,
+#hotui_source_panel > .hb_side_buttons > .hb_expand {
     background-color: #3480c2;
     border-radius: 5px;
     color: white;
