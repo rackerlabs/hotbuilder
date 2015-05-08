@@ -119,7 +119,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             $commonResources,
             $search = $('<input class="hb_search_resources" type="text" ' +
                         'placeholder="Search Resources...">'),
-            $html = $('<div class="hb_scroll hb_add_resource"></div>');
+            $html = $('<div class="hb_add_resource"></div>');
 
         function safePush(obj, key, val) {
             obj[key] = obj[key] || [];
@@ -149,7 +149,8 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
 
         $search.on('change keyup input paste', function () {
             var val = $search.val().toLowerCase();
-            $accordion.openSection(0);
+            $accordion.closeSection(0);
+            $accordion.openSection(1);
 
             function filterResources($el) {
                 var hasVisibleResource = false;
@@ -165,8 +166,6 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
 
                 return hasVisibleResource;
             }
-
-            filterResources($commonResources);
 
             $html.find('.hb_resource_org').each(function () {
                 var $org = $(this),
@@ -193,7 +192,6 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
 
         $commonResources = $(
             '<div>' +
-            '<h4>Common Resources</h4>' +
             commonResources.map(function (res) {
                 return getDraggableHTML(res.resource, res.label);
             }).join('') + '</div>');
@@ -216,7 +214,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             }));
 
         resMapKeys.forEach(function (sec0) {
-            resListHTML += '<div class="hb_resource_org"><hr>';
+            resListHTML += '<div class="hb_resource_org">';
             resListHTML += Snippy('<h3 class="resource_org">${0}</h3>')([sec0]);
 
             Object.keys(resMap[sec0]).sort().forEach(function (sec1) {
@@ -236,6 +234,13 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
         });
 
         $accordion = HotUI.UI.Accordion.create([{
+            label: 'Common Resources',
+            element: HotUI.UI.Base.extend({
+                _doHTML: function () {
+                    return $commonResources;
+                }
+            }).create()
+        }, {
             label: 'All Resources',
             element: HotUI.UI.Base.extend({
                 _doHTML: function () {
@@ -247,6 +252,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
         }]);
 
         $html.append($accordion.html(this));
+        $accordion.clickLabel(0);
 
         d3.select($html[0]).selectAll(".resource_draggable")
             .call(this._drag);
@@ -255,7 +261,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
     },
     _buildRefArch: function () {
         var self = this,
-            $html = $('<div class="hb_scroll hb_ref_arch"></div>');
+            $html = $('<div class="hb_ref_arch"></div>');
 
         $html.append('<h2>Pre-built Configurations</h2>');
 
@@ -286,7 +292,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
         return $html;
     },
     _doHTML: function () {
-        var $html = $('<div class="hb_home"></div>'),
+        var $html = $('<div class="hb_home hb_scroll"></div>'),
             $addResource,
             $refArch = this._buildRefArch();
 

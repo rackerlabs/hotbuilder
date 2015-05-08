@@ -24,10 +24,10 @@ HotUI.App = BaseObject.extend({
             navbar,
             topology = HotUI.Topology.create($("#hotui_topology")),
             sidePanel = HotUI.SidePanel.create(
-                                        templates,
-                                        $("#hotui_side_panel"),
-                                        $("#hotui_side_panel_content"),
-                                        $("#hotui_side_panel > .close_button")),
+                templates,
+                $("#hotui_side_panel"),
+                $("#hotui_side_panel_content"),
+                $("#hotui_side_panel > .hb_collapse_button")),
             sourcePanel = HotUI.SourcePanel.create(templates,
                                                    $("#hotui_source_panel"));
 

@@ -521,28 +521,22 @@
     color: red;
 }
 
-#hotui_side_panel > .background {
-    height: 100%;
-    opacity: 0.95;
-    position: absolute;
-    width: 100%;
-}
-
-#hotui_side_panel > .close_button {
-    color: black;
+#hotui_side_panel > .hb_collapse_button {
+    background-color: #f0f0f0;
+    border-bottom-right-radius: 6px;
     cursor: pointer;
     font-weight: bold;
-    height: 20px;
-    opacity: 0.7;
+    height: 23px;
+    padding-right: 2px;
     position: absolute;
-    right: 0;
+    right: -23px;
     text-align: center;
     top: 0;
-    width: 25px;
+    width: 23px;
 }
 
-#hotui_side_panel > .close_button:hover {
-    opacity: 1;
+#hotui_side_panel > .hb_collapse_button:hover {
+    color: #3480c2;
 }
 
 #hotui_side_panel .StringControl {
@@ -605,7 +599,6 @@
 }
 
 .hb_home > .hb_add_resource {
-    height: 60%;
     padding: 5px 10px;
 }
 
@@ -619,7 +612,6 @@
 
 .hb_home > .hb_ref_arch {
     border-top: 1px solid #e0e0e0;
-    height: 40%;
     padding: 5px 10px;
 }
 
@@ -643,7 +635,15 @@
 }
 
 .hb_resource_org {
+    border-top: 1px solid #b0b0b0;
     margin-top: 10px;
+    padding-top: 10px;
+}
+
+.hb_resource_org:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
 }
 
 .hb_resource_org > h3 {

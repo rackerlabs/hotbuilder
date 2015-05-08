@@ -13,14 +13,24 @@
 // limitations under the License.
 
 HotUI.SidePanel = BaseObject.extend({
-    create: function (templates, $container, $content, $closeButton) {
+    create: function (templates, $container, $content, $collapse) {
         var self = this.extend({
                 _templates: templates,
-                _isHidden: false,
+                _isHidden: ko.observable(false),
                 _width: $container.width(),
                 _$container: $container,
                 _$content: $content,
+                _$collapse: $collapse
             });
+
+        $collapse.click(function () {
+            if (self._isHidden()) {
+                self.show();
+            } else {
+                self.hide();
+            }
+        });
+        ko.applyBindings(self, $container[0]);
         return self;
     },
     _changeContent: function ($html) {
@@ -41,6 +51,13 @@ HotUI.SidePanel = BaseObject.extend({
     },
     _onResourceDrop: function () {},
     hide: function (onComplete) {
+        onComplete = onComplete || function () {};
+
+        if (this._isHidden()) {
+            onComplete();
+            return;
+        }
+
         this._$container.animate({
             left: -this._width,
             opacity: 0
@@ -51,6 +68,7 @@ HotUI.SidePanel = BaseObject.extend({
                 this._$container.css({
                     opacity: 1
                 });
+                this._isHidden(true);
                 onComplete();
             }.bind(this)
         });
@@ -64,6 +82,7 @@ HotUI.SidePanel = BaseObject.extend({
     },
     show: function () {
         this._$container.animate({left: 0}, {duration: 500});
+        this._isHidden(false);
     },
     showHome: function () {
         var self = this,

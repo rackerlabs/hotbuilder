@@ -19,10 +19,12 @@
     </div>
     <div id="hotui_overlay">
         <div id="hotui_navbar"></div>
-        <div id="hotui_side_panel">
+        <div id="hotui_side_panel" data-bind="css: {hb_collapsed: _isHidden}">
             <div id="hotui_side_panel_content">
                 Loading resources... <img src='/static/img/loading.gif'>
             </div>
+            <div class="hb_collapse_button"
+                 data-bind="text: _isHidden() ? '&gt;&gt;' : '&lt;&lt;'"></div>
         </div>
         <div id="hotui_source_panel"></div>
         <div id="hb_modal_layer">
