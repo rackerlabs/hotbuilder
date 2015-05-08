@@ -163,7 +163,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
                     x: self.w / 2 - 5,
                     y: -self.h / 2 + 5
                 })
-        })
+        });
 
         $linkButton = $buttonContainer.append('g')
             .attr({
@@ -181,7 +181,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
                     "</g>" +
                 "</svg>"
             )
-            .on('click', function () { d3.event.stopPropagation() })
+            .on('click', function () { d3.event.stopPropagation(); })
             .call(dragLinkCreator);
 
         $linkCreatorLine = $linkButton.append('line').attr({x1: 7.5, y1: 7.5});
