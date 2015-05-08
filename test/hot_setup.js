@@ -13,3 +13,5 @@
 // limitations under the License.
 
 HotUI = {};
+HOTUI_NESTED_TEMPLATES = [];
+HOTUI_RESOURCE_CONNECTIONS = [];
