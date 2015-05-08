@@ -445,12 +445,10 @@ HotUI.HOT = {};
         }
     }, {
         '@type': Object,
-
         'attributes': {
             '@type': Object,
             '?': {'@class': hot.ResourceAttribute}
         },
-
         'properties': {
             '@type': Object,
             '?': {
@@ -640,12 +638,10 @@ HotUI.HOT = {};
     });
 
     hot.ResourcePropertiesFactory = function (json, parameters, type) {
-        var propertyClass = hot['ResourceProperties_' + type],
+        var propertyClass = hot.ResourceProperties.Normal[type] ||
+                hot.ResourceProperties.Custom[type] ||
+                hot.ResourceProperties.Null,
             propertiesOut;
-
-        if (!propertyClass) {
-            propertyClass = hot.ResourcePropertiesNull;
-        }
 
         return propertyClass.create(json, parameters);
     };
@@ -875,6 +871,7 @@ HotUI.HOT = {};
         },
         'default': {
             '@type': Object,
+            '@required': false,
             // default can be various types, so wrap it in an object to
             // make Barricade happy
             '@inputMassager': function (json) {
@@ -979,30 +976,94 @@ HotUI.HOT = {};
             '?': {'@class': hot.Output}
         }
     });
+
+    hot.NestedTemplate = Barricade.ImmutableObject.extend({
+        getSchema: function () {
+            function getActualType(type) {
+                var types = {
+                    json: 'map',
+                    comma_delimited_list: 'list'
+                };
+                return types[type] || type;
+            }
+
+            return {
+                properties: this.get('parameters').toArray().reduce(
+                    function (objOut, param) {
+                        objOut[param.getID()] = {
+                            description: param.get('description').get(),
+                            type: getActualType(param.get('type').get())
+                        };
+                        return objOut;
+                    }, {}),
+                attributes: this.get('outputs').toArray().reduce(
+                    function (objOut, output) {
+                        objOut[output.getID()] = {
+                            description: output.get('description').get()
+                        };
+                        return objOut;
+                    }, {})
+            };
+        }
+    }, {
+        '@type': Object,
+
+        'heat_template_version': {'@type': String},
+        'description': {'@type': String, '@required': false},
+        'parameter_groups': {'@type': Array, '@required': false},
+        'resources': {'@type': Object},
+        'parameters': {
+            '@type': Object,
+            '?': {'@class': hot.Parameter}
+        },
+        'outputs': {
+            '@type': Object,
+            '@required': false,
+            '?': {
+                '@class': hot.Output.extend({}, {
+                    'value': {
+                        '@class': hot.Primitive,
+                        '@factory': hot.Primitive.Factory
+                    }
+                })
+            }
+        }
+    });
 }());
 
 function createHOT(resourceTypeObj) {
     var hot = HotUI.HOT,
-        allResourceTypes;
+        allResourceTypes,
+        nestedTemplates = HOTUI_NESTED_TEMPLATES;
+
+    function createResourceClass(resourceType) {
+        return hot.ResourceProperties.extend({
+                getBackingType: function () {
+                    return resourceType;
+                },
+                _automaticConnections:
+                    HOTUI_RESOURCE_CONNECTIONS[resourceType.getID()] || {}
+            },
+            resourceType.getSchema());
+    }
+
+    hot.ResourceProperties.Normal = {};
+    hot.ResourceProperties.Custom = {};
+
+    Object.keys(nestedTemplates).forEach(function (name) {
+        var nestedTemplate = hot.NestedTemplate.create(nestedTemplates[name]),
+            resType = hot.ResourceType.create(nestedTemplate.getSchema());
+        hot.ResourceProperties.Custom[name] = createResourceClass(resType);
+    });
 
     hot.resourceTypes = hot.ResourceTypes.create(resourceTypeObj);
 
-    // Create various hot.ResourceProperties_<type> types
-    // (ex. hot["ResourceProperties_AWS::EC2::Instance"])
-    allResourceTypes = hot.resourceTypes.toArray();
-
     // null resource type to aid ResourceGroup
-    allResourceTypes.push(hot.ResourceType.create({}, {id: 'null'}));
+    hot.ResourceProperties.Null =
+        createResourceClass(hot.ResourceType.create({}, {id: 'null'}));
 
-    allResourceTypes.forEach(function (resourceType) {
-        hot['ResourceProperties_' + resourceType.getID()] =
-            hot.ResourceProperties.extend({
-                    getBackingType: function () {
-                        return resourceType;
-                    },
-                    _automaticConnections:
-                        HOTUI_RESOURCE_CONNECTIONS[resourceType.getID()] || {}
-                },
-                resourceType.getSchema());
+    hot.resourceTypes.toArray().forEach(function (resType) {
+        hot.ResourceProperties.Normal[resType.getID()] =
+            createResourceClass(resType);
     });
 }
