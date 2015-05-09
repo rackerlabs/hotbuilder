@@ -336,16 +336,13 @@ TEMPLATES.wp_single = {
         }
     ],
     "heat_template_version": "2013-05-23",
-    "description":
-        "This is a Heat template to deploy a single Linux server " +
-        "running WordPress.\n",
+    "description": "This is a Heat template to deploy a single Linux server running WordPress.\n",
     "parameters": {
         "server_hostname": {
             "default": "WordPress",
             "label": "Server Name",
             "type": "string",
-            "description":
-                "Hostname to use for the server that's built.",
+            "description": "Hostname to use for the server that's built.",
             "constraints": [
                 {
                     "length": {
@@ -355,9 +352,7 @@ TEMPLATES.wp_single = {
                 },
                 {
                     "allowed_pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
-                    "description":
-                        "Must begin with a letter and contain only " +
-                        "alphanumeric characters.\n"
+                    "description": "Must begin with a letter and contain only alphanumeric characters.\n"
                 }
             ]
         },
@@ -365,15 +360,11 @@ TEMPLATES.wp_single = {
             "default": "wp_user",
             "label": "Username",
             "type": "string",
-            "description":
-                "Username for system, database, and WordPress logins.",
+            "description": "Username for system, database, and WordPress logins.",
             "constraints": [
                 {
                     "allowed_pattern": "^[a-zA-Z0-9 _.@-]{1,16}$",
-                    "description":
-                        "Must be shorter than 16 characters and may " +
-                        "only contain alphanumeric\ncharacters, ' ', " +
-                        "'_', '.', '@', and/or '-'.\n"
+                    "description": "Must be shorter than 16 characters and may only contain alphanumeric\ncharacters, ' ', '_', '.', '@', and/or '-'.\n"
                 }
             ]
         },
@@ -384,8 +375,7 @@ TEMPLATES.wp_single = {
             "description": "Domain to be used with WordPress site",
             "constraints": [
                 {
-                    "allowed_pattern":
-                        "^[a-zA-Z0-9.-]{1,255}.[a-zA-Z]{2,15}$",
+                    "allowed_pattern": "^[a-zA-Z0-9.-]{1,255}.[a-zA-Z]{2,15}$",
                     "description": "Must be a valid domain name"
                 }
             ]
@@ -394,13 +384,10 @@ TEMPLATES.wp_single = {
             "default": "Ubuntu 12.04 LTS (Precise Pangolin) (PVHVM)",
             "label": "Operating System",
             "type": "string",
-            "description":
-                "Required: Server image used for all servers that " +
-                "are created as a part of\nthis deployment.\n",
+            "description": "Required: Server image used for all servers that are created as a part of\nthis deployment.\n",
             "constraints": [
                 {
-                    "description":
-                        "Must be a supported operating system.",
+                    "description": "Must be a supported operating system.",
                     "allowed_values": [
                         "Ubuntu 12.04 LTS (Precise Pangolin) (PVHVM)"
                     ]
@@ -411,27 +398,23 @@ TEMPLATES.wp_single = {
             "default": "wp_",
             "label": "Database Prefix",
             "type": "string",
-            "description":
-                "Prefix to use for WordPress database tables",
+            "description": "Prefix to use for WordPress database tables",
             "constraints": [
                 {
                     "allowed_pattern": "^[0-9a-zA-Z$_]{0,10}$",
-                    "description":
-                        "Prefix must be shorter than 10 characters, " +
-                        "and can only include\nletters, numbers, $, " +
-                        "and/or underscores.\n"
+                    "description": "Prefix must be shorter than 10 characters, and can only include\nletters, numbers, $, and/or underscores.\n"
                 }
             ]
         },
         "version": {
-            "default": "3.9.3",
+            "default": "4.2.2",
             "label": "WordPress Version",
             "type": "string",
             "description": "Version of WordPress to install",
             "constraints": [
                 {
                     "allowed_values": [
-                        "3.9.3"
+                        "4.2.2"
                     ]
                 }
             ]
@@ -444,9 +427,7 @@ TEMPLATES.wp_single = {
             "constraints": [
                 {
                     "allowed_pattern": "^[0-9a-zA-Z$_]{1,64}$",
-                    "description":
-                        "Maximum length of 64 characters, may only " +
-                        "contain letters, numbers, and\nunderscores.\n"
+                    "description": "Maximum length of 64 characters, may only contain letters, numbers, and\nunderscores.\n"
                 }
             ]
         },
@@ -454,16 +435,10 @@ TEMPLATES.wp_single = {
             "default": "4 GB General Purpose v1",
             "label": "Server Size",
             "type": "string",
-            "description":
-                "Required: Rackspace Cloud Server flavor to use. The " +
-                "size is based on the\namount of RAM for the " +
-                "provisioned server.\n",
+            "description": "Required: Rackspace Cloud Server flavor to use. The size is based on the\namount of RAM for the provisioned server.\n",
             "constraints": [
                 {
-                    "description":
-                        "Must be a valid Rackspace Cloud Server " +
-                        "flavor for the region you have\nselected to " +
-                        "deploy into.\n",
+                    "description": "Must be a valid Rackspace Cloud Server flavor for the region you have\nselected to deploy into.\n",
                     "allowed_values": [
                         "1 GB General Purpose v1",
                         "2 GB General Purpose v1",
@@ -488,12 +463,9 @@ TEMPLATES.wp_single = {
             "label": "Chef Version"
         },
         "kitchen": {
-            "default":
-                "https://github.com/rackspace-orchestration-templates" +
-                "/wordpress-single.git",
+            "default": "https://github.com/rackspace-orchestration-templates/wordpress-single.git",
             "type": "string",
-            "description":
-                "URL for a git repo containing required cookbooks",
+            "description": "URL for a git repo containing required cookbooks",
             "label": "Kitchen URL"
         }
     },
