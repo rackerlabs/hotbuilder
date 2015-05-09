@@ -19,6 +19,7 @@ HotUI.TopologyNode.factory = function (resource, resumeFunc, props) {
         type = resource.getType().toLowerCase(),
         types = {
             autoscale: this.AutoScale,
+            chefsolo: this.ChefSolo,
             loadbalancer: this.LoadBalancer,
             volume: this.Database,
             container: this.Database,
@@ -279,6 +280,10 @@ HotUI.TopologyNode.Server = HotUI.TopologyNode.Core.extend({
 HotUI.TopologyNode.Database = HotUI.TopologyNode.Core.extend({
     focus: {x: 0, y: 150},
     iconFile: 'icon-block-storage.svg'
+});
+
+HotUI.TopologyNode.ChefSolo = HotUI.TopologyNode.Helper.extend({
+    iconFile: 'chef.svg'
 });
 
 HotUI.TopologyNode.AutoScale = HotUI.TopologyNode.Helper.extend({

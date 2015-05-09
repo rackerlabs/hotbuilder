@@ -714,6 +714,10 @@
     background-image: url(/static/hotui/img/icon-load-balancers.svg);
 }
 
+.resource_draggable[type*=ChefSolo] > div {
+    background-image: url(/static/hotui/img/chef.svg);
+}
+
 .resource_draggable[type*=AutoScale] > div {
     background-image: url(/static/hotui/img/icon-auto-scale.svg);
 }
