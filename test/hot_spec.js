@@ -16,18 +16,33 @@ createHOT(RESOURCE_TYPE_SHOW);
 
 describe('HOT', function () {
     beforeEach(function () {
-
-        this.template = HotUI.HOT.Template.create(TEMPLATES.wp_single);
+        this.templates = Object.keys(TEMPLATES).reduce(function (objOut, key) {
+            objOut[key] = HotUI.HOT.Template.create(TEMPLATES[key]);
+            return objOut;
+        }, {});
     });
 
     it('should resolve intrinsic functions in primitive maps', function () {
-        var wp_setup = this.template.get('resources')
-                                    .getByID('wordpress_setup');
+        var wp_setup = this.templates.wp_single.get('resources')
+                                               .getByID('wordpress_setup');
 
         expect(wp_setup.getIntrinsicFunctions().length).toEqual(25);
     });
 
     it('should output the same template that was put in', function () {
-        expect(this.template.toJSON(true)).toEqual(TEMPLATES.wp_single);
+        Object.keys(this.templates).forEach(function (name) {
+            var t1 = this.templates[name].toJSON(true),
+                t2 = TEMPLATES[name];
+
+            Object.keys(t1).forEach(function (k) {
+                if (typeof t1[k] === 'object') {
+                    Object.keys(t1[k]).forEach(function (l) {
+                        expect(t1[k][l]).toEqual(t2[k][l]);
+                    });
+                } else {
+                    expect(t1[k]).toEqual(t2[k]);
+                }
+            });
+        }, this);
     });
 });

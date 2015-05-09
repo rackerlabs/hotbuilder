@@ -204,7 +204,8 @@ TEMPLATES.lamp_single = {
                 "flavor": {
                     "get_param": "flavor"
                 },
-                "config_drive": "true"
+                //"config_drive": "true"
+                "config_drive": true
             }
         },
         "phpmyadmin_pass": {
@@ -913,13 +914,15 @@ TEMPLATES.php_single = {
             ]
         },
         "http_port": {
-            "default": 80,
+            //"default": 80,
+            "default": "80",
             "type": "string",
             "description": "HTTP Port",
             "label": "HTTP Port"
         },
         "https_port": {
-            "default": 443,
+            //"default": 443,
+            "default": "443",
             "type": "string",
             "description": "HTTPS Port",
             "label": "HTTPS Port"
