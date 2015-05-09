@@ -24,6 +24,7 @@ HotUI.TopologyNode.factory = function (resource, resumeFunc, props) {
             container: this.Database,
             trove: this.Database,
             key: this.Key,
+            randomstring: this.RandomString,
             dns: this.DNS,
             network: this.Network,
             server: this.Server,
@@ -60,9 +61,13 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         return self;
     },
     _iconBaseURL: '/static/hotui/img/',
-    h: 110,
-    w: 80,
-    padding: 10,
+    _h: 110,
+    _w: 80,
+    h: function () { return this._h * this.scale; },
+    w: function () { return this._w * this.scale; },
+    scale: 1,
+    _padding: 10,
+    padding: function () { return this._padding * this.scale; },
     focus: {x: 0, y: 0},
     focusForce: {x: 0.5, y: 0.5},
     getIconURL: function () {
@@ -72,8 +77,8 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         return this.resource.canConnectTo(d.resource);
     },
     containsPoint: function (p) {
-        return Math.abs(p.x - this.x) < this.w / 2 &&
-               Math.abs(p.y - this.y) < this.h / 2;
+        return Math.abs(p.x - this.x) < this.w() / 2 &&
+               Math.abs(p.y - this.y) < this.h() / 2;
     },
     setNameOnElement: function ($el) {
         var name = this.resource.getID(),
@@ -81,7 +86,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
         $el.textContent = name;
 
-        while ($el.getComputedTextLength() > this.w - 5) {
+        while ($el.getComputedTextLength() > this._w - 5) {
             $el.textContent = name.slice(0, i) + '...' + name.slice(-i);
             i--;
         }
@@ -101,7 +106,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
     decorateNode: function () {
         var self = this,
             resImgPad = 15,
-            resImgWidth = self.w - resImgPad * 2,
+            resImgWidth = self._w - resImgPad * 2,
             $g = this.svg.node,
             $label,
             $textContainer,
@@ -135,11 +140,11 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
         $g.append('rect').attr({
             'class': 'hb_bg',
-            height: this.h,
+            height: this._h,
             rx: '5',
-            width: this.w,
-            x: -this.w / 2,
-            y: -this.h / 2
+            width: this._w,
+            x: -this._w / 2,
+            y: -this._h / 2
         });
 
         $g.append('image').attr({
@@ -147,7 +152,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             height: resImgWidth,
             width: resImgWidth,
             x: -resImgWidth / 2,
-            y: -this.h/2 + 25,
+            y: -this._h/2 + 25,
             'xlink:href': this.getIconURL()
         });
 
@@ -160,8 +165,8 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         $buttonContainer = $g.append('g').attr({
             'class': 'hb_node_buttons',
             transform: Snippy('translate(${x}, ${y})')({
-                    x: self.w / 2 - 5,
-                    y: -self.h / 2 + 5
+                    x: self._w / 2 - 5,
+                    y: -self._h / 2 + 5
                 })
         });
 
@@ -249,6 +254,13 @@ HotUI.TopologyNode.Helper = HotUI.TopologyNode.Base.extend({
     focusForce: {x: 0.05, y: 0.01}
 });
 
+HotUI.TopologyNode.Follower = HotUI.TopologyNode.Base.extend({
+    charge: -100,
+    scale: 0.5,
+    focus: {x: 0, y: 0},
+    focusForce: {x: 0, y: 0}
+});
+
 HotUI.TopologyNode.DNS = HotUI.TopologyNode.Core.extend({
     focus: {x: 0, y: -300},
     iconFile: 'icon-dns.svg'
@@ -277,8 +289,12 @@ HotUI.TopologyNode.Network = HotUI.TopologyNode.Helper.extend({
     iconFile: 'icon-networks.svg'
 });
 
-HotUI.TopologyNode.Key = HotUI.TopologyNode.Helper.extend({
+HotUI.TopologyNode.Key = HotUI.TopologyNode.Follower.extend({
     iconFile: 'icon-private-cloud.svg'
+});
+
+HotUI.TopologyNode.RandomString = HotUI.TopologyNode.Follower.extend({
+    iconFile: 'icon-random-string.svg'
 });
 
 HotUI.Topology = BaseObject.extend({
@@ -354,7 +370,10 @@ HotUI.Topology = BaseObject.extend({
                  return d.charge;
              })
              .linkDistance(function (d) {
-                 if (d.source.instanceof(HotUI.TopologyNode.Core) &&
+                 if (d.source.instanceof(HotUI.TopologyNode.Follower) ||
+                         d.target.instanceof(HotUI.TopologyNode.Follower)) {
+                     return 25;
+                 } else if (d.source.instanceof(HotUI.TopologyNode.Core) &&
                          d.target.instanceof(HotUI.TopologyNode.Core)) {
                      return 200;
                  } else if (d.source.instanceof(HotUI.TopologyNode.Helper) &&
@@ -448,18 +467,18 @@ HotUI.Topology = BaseObject.extend({
     _collide: function (nodes, alpha) {
         var quadtree = d3.geom.quadtree(nodes),
             maxH = Math.max.apply(null, nodes.map(function (d) {
-                return d.h;
+                return d.h();
             })),
             maxW = Math.max.apply(null, nodes.map(function (d) {
-                return d.w;
+                return d.w();
             })),
             maxPadding = Math.max.apply(null, nodes.map(function (d) {
-                return d.padding;
+                return d.padding();
             }));
 
         return function (d) {
-            var xMin = (d.w + maxW) / 2 + maxPadding,
-                yMin = (d.h + maxH) / 2 + maxPadding,
+            var xMin = (d.w() + maxW) / 2 + maxPadding,
+                yMin = (d.h() + maxH) / 2 + maxPadding,
                 nx1 = d.x - xMin,
                 nx2 = d.x + xMin,
                 ny1 = d.y - yMin,
@@ -467,13 +486,13 @@ HotUI.Topology = BaseObject.extend({
 
             quadtree.visit(function (quad, x1, y1, x2, y2) {
                 if (quad.point && quad.point !== d) {
-                    var pad = Math.max(d.padding, quad.point.padding),
+                    var pad = Math.max(d.padding(), quad.point.padding()),
                         xDelta = d.x - quad.point.x,
                         yDelta = d.y - quad.point.y,
                         xDist = Math.abs(xDelta),
                         yDist = Math.abs(yDelta),
-                        xMin = (d.w + quad.point.w) / 2 + pad,
-                        yMin = (d.h + quad.point.h) / 2 + pad,
+                        xMin = (d.w() + quad.point.w()) / 2 + pad,
+                        yMin = (d.h() + quad.point.h()) / 2 + pad,
                         xOverlapRatio,
                         yOverlapRatio;
 
@@ -506,9 +525,10 @@ HotUI.Topology = BaseObject.extend({
         }
 
         this._node.attr('transform', function (d) {
-            return Snippy('translate(${x},${y})')({
+            return Snippy('translate(${x},${y})scale(${s})')({
                 x: d.x.toFixed(10),
-                y: d.y.toFixed(10)
+                y: d.y.toFixed(10),
+                s: d.scale
             });
         });
 
