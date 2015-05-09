@@ -619,7 +619,9 @@
     border-radius: 4px;
     cursor: pointer;
     display: inline-block;
+    height: 125px;
     margin: 2px;
+    vertical-align: top;
     text-align: center;
     padding: 3px;
     width: 85px;
@@ -627,6 +629,11 @@
 
 .hb_prebuilt_config:hover {
     background-color: #d0d0d0;
+}
+
+.hb_prebuilt_config > img {
+    height: 80px;
+    width: 100%;
 }
 
 /* Add Resource */
