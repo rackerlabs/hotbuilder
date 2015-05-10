@@ -111,6 +111,9 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         this._appendButtonContainer(this.svg.node);
         this.updateNode();
     },
+    _getMousePos: function () {
+        return d3.mouse(this.svg.node[0][0].parentNode);
+    },
     _getLinkCreatorDrag: function ($g, $linkButton, $linkCreatorLine) {
         return d3.behavior.drag()
             .on('dragstart', function () {
@@ -120,19 +123,15 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             }.bind(this))
             .on('drag', function (d) {
                 var pos = d3.mouse($linkButton[0][0]),
-                    gPos = d3.mouse($g[0][0]);
+                    gPos = this._getMousePos();
                 $linkCreatorLine.attr({x2: pos[0], y2: pos[1]});
-                this.emit('linkCreateDrag', {
-                    x: d.x + gPos[0],
-                    y: d.y + gPos[1]
-                });
+                this.emit('linkCreateDrag', {x: gPos[0], y: gPos[1]});
             }.bind(this))
             .on('dragend', function (d) {
-                var pos = d3.mouse($g[0][0]);
+                var pos = this._getMousePos();
                 $g.classed('hb_linking', false);
                 $linkCreatorLine.attr({x2: 7.5, y2: 7.5});
-                this.emit(
-                    'linkCreateDragEnd', d.x + pos[0], d.y + pos[1], this);
+                this.emit('linkCreateDragEnd', pos[0], pos[1], this);
             }.bind(this));
     },
     _appendBackground: function ($g) {
@@ -246,6 +245,14 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
         $g.selectAll('.resource_type')
             .text(this.resource.getType().split('::')[2]);
+    },
+    updatePos: function () {
+        this.svg.node.attr(
+            'transform', Snippy('translate(${x},${y})scale(${s})')({
+                x: this.x.toFixed(10),
+                y: this.y.toFixed(10),
+                s: this.scale
+            }));
     }
 });
 
@@ -538,12 +545,8 @@ HotUI.Topology = BaseObject.extend({
             return angle * (180 / Math.PI);
         }
 
-        this._node.attr('transform', function (d) {
-            return Snippy('translate(${x},${y})scale(${s})')({
-                x: d.x.toFixed(10),
-                y: d.y.toFixed(10),
-                s: d.scale
-            });
+        this._node.each(function (d) {
+            d.updatePos();
         });
 
         this._link.attr('transform', function (d) {
@@ -591,13 +594,11 @@ HotUI.Topology = BaseObject.extend({
     },
     _webTick: function () {},
     _onLinkCreatorDrop: function (x, y, srcNode) {
-        var self = this;
-
         this._nodes.forEach(function (n) {
             if (n !== srcNode && n.containsPoint({x: x, y: y})) {
-                self._onLinkCreatorCreate(srcNode.resource, n.resource);
+                this._onLinkCreatorCreate(srcNode.resource, n.resource);
             }
-        });
+        }.bind(this));
     },
     aboutToAddResource: function (posX, posY) {
         this._nextResourcePt = {
