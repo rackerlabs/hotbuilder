@@ -105,40 +105,37 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         this.decorateNode();
     },
     decorateNode: function () {
-        var self = this,
-            resImgPad = 15,
-            resImgWidth = self._w - resImgPad * 2,
-            $g = this.svg.node,
-            $label,
-            $textContainer,
-            $buttonContainer,
-            $linkButton,
-            $linkCreatorLine,
-            dragLinkCreator;
-
-        dragLinkCreator = d3.behavior.drag()
+        this._appendBackground(this.svg.node);
+        this._appendResourceImage(this.svg.node);
+        this._appendTextContainer(this.svg.node);
+        this._appendButtonContainer(this.svg.node);
+        this.updateNode();
+    },
+    _getLinkCreatorDrag: function ($g, $linkButton, $linkCreatorLine) {
+        return d3.behavior.drag()
             .on('dragstart', function () {
                 $g.classed('hb_linking', true);
                 d3.event.sourceEvent.stopPropagation();
-                self.emit('linkCreateDragStart', self);
-            })
+                this.emit('linkCreateDragStart', this);
+            }.bind(this))
             .on('drag', function (d) {
                 var pos = d3.mouse($linkButton[0][0]),
                     gPos = d3.mouse($g[0][0]);
                 $linkCreatorLine.attr({x2: pos[0], y2: pos[1]});
-                self.emit('linkCreateDrag', {
+                this.emit('linkCreateDrag', {
                     x: d.x + gPos[0],
                     y: d.y + gPos[1]
                 });
-            })
+            }.bind(this))
             .on('dragend', function (d) {
                 var pos = d3.mouse($g[0][0]);
                 $g.classed('hb_linking', false);
                 $linkCreatorLine.attr({x2: 7.5, y2: 7.5});
-                self.emit(
-                    'linkCreateDragEnd', d.x + pos[0], d.y + pos[1], self);
-            });
-
+                this.emit(
+                    'linkCreateDragEnd', d.x + pos[0], d.y + pos[1], this);
+            }.bind(this));
+    },
+    _appendBackground: function ($g) {
         $g.append('rect').attr({
             'class': 'hb_bg',
             height: this._h,
@@ -147,6 +144,10 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             x: -this._w / 2,
             y: -this._h / 2
         });
+    },
+    _appendResourceImage: function ($g) {
+        var resImgPad = 15,
+            resImgWidth = this._w - resImgPad * 2;
 
         $g.append('image').attr({
             'class': 'resource_image',
@@ -156,20 +157,44 @@ HotUI.TopologyNode.Base = BaseObject.extend({
             y: -this._h/2 + 25,
             'xlink:href': this.getIconURL()
         });
-
-        $label = $g.append('g')
-                   .attr('class', 'label');
-
-        $textContainer = $label.append('g')
-                               .attr('class', 'text_container');
-
-        $buttonContainer = $g.append('g').attr({
-            'class': 'hb_node_buttons',
-            transform: Snippy('translate(${x}, ${y})')({
-                    x: self._w / 2 - 5,
-                    y: -self._h / 2 + 5
-                })
+    },
+    _appendTextContainer: function ($g) {
+        var $textContainer = $g.append('g').attr('class', 'text_container');
+        this._appendResourceName($textContainer);
+        this._appendResourceType($textContainer);
+    },
+    _appendResourceName: function ($textContainer) {
+        $textContainer.append('text').attr({
+            'class': 'resource_name',
+            'text-anchor': 'middle',
+            x: 0,
+            y: 35
         });
+    },
+    _appendResourceType: function ($textContainer) {
+        $textContainer.append('text').attr({
+            'class': 'resource_type',
+            'text-anchor': 'middle',
+            x: 0,
+            y: 45
+        });
+    },
+    _appendButtonContainer: function ($g) {
+        var $buttonContainer = $g.append('g').attr({
+                'class': 'hb_node_buttons',
+                transform: Snippy('translate(${x}, ${y})')({
+                        x: this._w / 2 - 5,
+                        y: -this._h / 2 + 5
+                    })
+            });
+
+        this._appendLinkButton($g, $buttonContainer);
+        this._appendPinButton($buttonContainer);
+
+    },
+    _appendLinkButton: function ($g, $buttonContainer) {
+        var $linkButton,
+            $linkCreatorLine;
 
         $linkButton = $buttonContainer.append('g')
             .attr({
@@ -187,41 +212,28 @@ HotUI.TopologyNode.Base = BaseObject.extend({
                     "</g>" +
                 "</svg>"
             )
-            .on('click', function () { d3.event.stopPropagation(); })
-            .call(dragLinkCreator);
+            .on('click', function () { d3.event.stopPropagation(); });
 
         $linkCreatorLine = $linkButton.append('line').attr({x1: 7.5, y1: 7.5});
 
+        $linkButton.call(
+            this._getLinkCreatorDrag($g, $linkButton, $linkCreatorLine));
+    },
+    _appendPinButton: function ($buttonContainer) {
         $buttonContainer.append('g')
             .attr({
                 'class': 'hb_pin',
                 transform: 'translate(-15, 0)',
             }).on('click', function () {
-                self.setFixed(!self._fixed);
+                this.setFixed(!this._fixed);
                 d3.event.stopPropagation();
-            }).html(
+            }.bind(this)).html(
                 "<rect width='15' height='15' x='0' y='0' rx='3' />" +
                 "<svg xmlns='http://www.w3.org/2000/svg' class='hb_pin_icon' " +
                         "width='15' height='15' viewBox='0 0 100 100'>" +
                     "<rect width='26' height='45' x='37' y='15' />" +
                     "<path d='M 25 60 H 75 M 50 60 V 90 M 57 15 V 60'/>" +
                 "</svg>");
-
-        $textContainer.append('text').attr({
-            'class': 'resource_name',
-            'text-anchor': 'middle',
-            x: 0,
-            y: 35
-        });
-
-        $textContainer.append('text').attr({
-            'class': 'resource_type',
-            'text-anchor': 'middle',
-            x: 0,
-            y: 45
-        });
-
-        this.updateNode();
     },
     updateNode: function () {
         var $g = this.svg.node,
