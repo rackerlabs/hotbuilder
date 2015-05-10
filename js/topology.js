@@ -358,7 +358,8 @@ HotUI.Topology = BaseObject.extend({
             self._nodes.forEach(function (n) {
                 positions[n.resource.getID()] = {
                     x: n.x,
-                    y: n.y
+                    y: n.y,
+                    _fixed: n._fixed
                 };
             });
 
@@ -686,7 +687,8 @@ HotUI.Topology = BaseObject.extend({
             } else if (positions.hasOwnProperty(resource.getID())) {
                 return HotUI.TopologyNode.factory(resource, resumeFunc, {
                     x: positions[resource.getID()].x,
-                    y: positions[resource.getID()].y
+                    y: positions[resource.getID()].y,
+                    _fixed: positions[resource.getID()]._fixed
                 });
             } else {
                 return HotUI.TopologyNode.factory(resource, resumeFunc, {
