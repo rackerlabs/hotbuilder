@@ -246,11 +246,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
 
         $g.selectAll('.resource_type')
             .text(this.resource.getType().split('::')[2]);
-    },
-    setOnLinkCreatorDrop: function (callback) {
-        this._onLinkCreatorDrop = callback;
-    },
-    _onLinkCreatorDrop: function () { }
+    }
 });
 
 // Represents a main infrastructure component
