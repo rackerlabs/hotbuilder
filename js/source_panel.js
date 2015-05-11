@@ -34,7 +34,8 @@ HotUI.SourcePanel = BaseObject.extend({
                                 'click: toggleExpand"></div>' +
                 '<div class="hb_save" ' +
                      'data-bind="click: updateTemplate,' +
-                                'dirtyEditor: !_isClean() && !_hasFocus(),'+
+                                'dirtyEditor: !_isClean() && !_hasFocus() &&'+
+                                             '_visible(),'+
                                 'css: {hb_dirty: !_isClean()}">'+
                     'Update Topology</div>' +
                 '<div class="hb_showhide" ' +
