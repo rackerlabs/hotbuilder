@@ -47,11 +47,12 @@ var Barricade = (function () {
         */
         create: function (f) {
             return function g() {
-                if (!Object.prototype.hasOwnProperty.call(this, '_parents')) {
-                    Object.defineProperty(this, '_parents', {value: []});
+                var result = f.apply(this, arguments) || this;
+                if (!Object.prototype.hasOwnProperty.call(result, '_parents')) {
+                    Object.defineProperty(result, '_parents', {value: []});
                 }
-                this._parents.push(g);
-                return f.apply(this, arguments);
+                result._parents.push(g);
+                return result;
             };
         }
     };
@@ -167,42 +168,58 @@ var Barricade = (function () {
     * @mixin
     * @memberof Barricade
     */
-    Identifiable = Blueprint.create(function (id) {
-        /**
-        * Returns the ID
-        * @method getID
-        * @memberof Barricade.Identifiable
-        * @instance
-        * @returns {String}
-        */
-        this.getID = function () {
-            return id;
-        };
+    Identifiable = (function () {
+        var counter = 0;
+        return Blueprint.create(function (id) {
+            var uid = this._uidPrefix + counter++;
 
-        /**
-        * Checks whether the ID is set for this item.
-        * @method hasID
-        * @memberof Barricade.Identifiable
-        * @instance
-        * @returns {Boolean}
-        */
-        this.hasID = function() {
-            return id !== undefined;
-        };
+            /**
+            * Returns the ID
+            * @method getID
+            * @memberof Barricade.Identifiable
+            * @instance
+            * @returns {String}
+            */
+            this.getID = function () {
+                return id;
+            };
 
-        /**
-        * Sets the ID.
-        * @method setID
-        * @memberof Barricade.Identifiable
-        * @instance
-        * @param {String} newID
-        * @returns {self}
-        */
-        this.setID = function (newID) {
-            id = newID;
-            return this.emit('change', 'id');
-        };
+            /**
+            * Gets the unique ID of this particular element
+            * @method uid
+            * @memberof Barricade.Identifiable
+            * @instance
+            * @returns {String}
+            */
+            this.uid = function () {
+                return uid;
+            };
+
+            /**
+            * Checks whether the ID is set for this item.
+            * @method hasID
+            * @memberof Barricade.Identifiable
+            * @instance
+            * @returns {Boolean}
+            */
+            this.hasID = function() {
+                return id !== undefined;
+            };
+
+            /**
+            * Sets the ID.
+            * @method setID
+            * @memberof Barricade.Identifiable
+            * @instance
+            * @param {String} newID
+            * @returns {self}
+            */
+            this.setID = function (newID) {
+                id = newID;
+                return this.emit('change', 'id');
+            };
     });
+})();
 
     /**
     * Tracks whether an object is being "used" or not, which is a state that
@@ -563,6 +580,12 @@ var Barricade = (function () {
         * @memberof Barricade.Base
         * @private
         */
+        _uidPrefix: 'obj-',
+
+        /**
+        * @memberof Barricade.Base
+        * @private
+        */
         _getDefaultValue: function () {
             return this._schema.hasOwnProperty('@default')
                 ? typeof this._schema['@default'] === 'function'
@@ -599,7 +622,7 @@ var Barricade = (function () {
         * @private
         */
         _safeInstanceof: function (instance, class_) {
-            return typeof instance === 'object' &&
+            return getType(instance) === Object &&
                 ('instanceof' in instance) &&
                 instance.instanceof(class_);
         },
@@ -610,6 +633,14 @@ var Barricade = (function () {
         */
         _sift: function () {
             throw new Error("sift() must be overridden in subclass");
+        },
+
+        /**
+        * @memberof Barricade.Base
+        * @private
+        */
+        _getPrettyJSON: function (options) {
+            return this._getJSON(options);
         },
 
         /**
@@ -641,6 +672,25 @@ var Barricade = (function () {
         */
         isRequired: function () {
             return this._schema['@required'] !== false;
+        },
+
+        /**
+        * Returns the JSON representation of the Barricade object.
+        * @memberof Barricade.Base
+        * @instance
+        * @param {Object} [options]
+                 An object containing options that affect the JSON result.
+                 Current supported options are ignoreUnused (Boolean, defaults
+                 to false), which skips keys with values that are unused in
+                 objects, and pretty (Boolean, defaults to false), which gives
+                 control to the method `_getPrettyJSON`.
+        * @returns {JSON}
+        */
+        toJSON: function (options) {
+            options = options || {};
+            return options.pretty
+                ? this._getPrettyJSON(options)
+                : this._getJSON(options);
         }
     }));
 
@@ -830,6 +880,16 @@ var Barricade = (function () {
         }, 
 
         /**
+        * @memberof Barricade.Arraylike
+        * @private
+        */
+        _getJSON: function (options) {
+            return this._data.map(function (el) {
+                return el.toJSON(options);
+            });
+        },
+
+        /**
         * @callback Barricade.Arraylike.eachCB
         * @param {Number} index
         * @param {Element} value
@@ -933,22 +993,6 @@ var Barricade = (function () {
         */
         toArray: function () {
             return this._data.slice(); // Shallow copy to prevent mutation
-        },
-
-        /**
-        * Converts the Arraylike and all of its elements to JSON.
-        * @memberof Barricade.Arraylike
-        * @instance
-        * @param {Boolean} [ignoreUnused]
-                 Whether to include unused entries. Has no effect at Arraylike's
-                 level, but is passed into each element for them to decide.
-        * @returns {Array} JSON array containing JSON representations of each
-                           element.
-        */
-        toJSON: function (ignoreUnused) {
-            return this._data.map(function (el) {
-                return el.toJSON(ignoreUnused);
-            });
         }
     });
 
@@ -1020,6 +1064,20 @@ var Barricade = (function () {
         },
 
         /**
+        * @memberof Barricade.ImmutableObject
+        * @private
+        */
+        _getJSON: function (options) {
+            var data = this._data;
+            return this.getKeys().reduce(function (jsonOut, key) {
+                if (options.ignoreUnused !== true || data[key].isUsed()) {
+                    jsonOut[key] = data[key].toJSON(options);
+                }
+                return jsonOut;
+            }, {});
+        },
+
+        /**
         * @callback Barricade.ImmutableObject.eachCB
         * @param {String} key
         * @param {Element} value
@@ -1080,25 +1138,6 @@ var Barricade = (function () {
         */
         isEmpty: function () {
             return !Object.keys(this._data).length;
-        },
-
-        /**
-        * @memberof Barricade.ImmutableObject
-        * @instance
-        * @param {Boolean} [ignoreUnused]
-                 Whether to include unused entries. If true, unused values will
-                 not have their key/value pairs show up in the resulting JSON.
-        * @returns {Object} JSON representation of the ImmutableObject and its
-                   values.
-        */
-        toJSON: function (ignoreUnused) {
-            var data = this._data;
-            return this.getKeys().reduce(function (jsonOut, key) {
-                if (ignoreUnused !== true || data[key].isUsed()) {
-                    jsonOut[key] = data[key].toJSON(ignoreUnused);
-                }
-                return jsonOut;
-            }, {});
         }
     });
 
@@ -1113,6 +1152,21 @@ var Barricade = (function () {
         * @private
         */
         _elSymbol: '?',
+
+        /**
+        * @memberof Barricade.MutableObject
+        * @private
+        */
+        _getJSON: function (options) {
+            return this.toArray().reduce(function (jsonOut, element) {
+                if (jsonOut.hasOwnProperty(element.getID())) {
+                    logError("ID found multiple times: " + element.getID());
+                } else {
+                    jsonOut[element.getID()] = element.toJSON(options);
+                }
+                return jsonOut;
+            }, {});
+        },
 
         /**
         * @memberof Barricade.MutableObject
@@ -1192,28 +1246,6 @@ var Barricade = (function () {
             } else {
                 return Arraylike.push.call(this, newJson, newParameters);
             }
-        },
-
-        /**
-        * Converts the MutableObject and all of its elements to JSON.
-        * @memberof Barricade.MutableObject
-        * @instance
-        * @param {Boolean} [ignoreUnused]
-                 Whether to include unused entries. If true, elements that are
-                 unused will not be included in the return value. This parameter
-                 is also passed to each element's `toJSON()` method.
-        * @returns {Object} JSON object containing JSON representations of each
-                   element.
-        */
-        toJSON: function (ignoreUnused) {
-            return this.toArray().reduce(function (jsonOut, element) {
-                if (jsonOut.hasOwnProperty(element.getID())) {
-                    logError("ID found multiple times: " + element.getID());
-                } else {
-                    jsonOut[element.getID()] = element.toJSON(ignoreUnused);
-                }
-                return jsonOut;
-            }, {});
         }
     });
 
@@ -1229,6 +1261,14 @@ var Barricade = (function () {
         */
         _sift: function (json) {
             return json;
+        },
+
+        /**
+        * @memberof Barricade.Primitive
+        * @private
+        */
+        _getJSON: function () {
+            return this._data;
         },
 
         /**
@@ -1283,16 +1323,6 @@ var Barricade = (function () {
             logError("Setter - new value (", newVal, ")",
                      " did not match schema: ", schema);
             return this;
-        },
-
-        /**
-        * Converts the Primitive to JSON (which is simply the value itself).
-        * @memberof Barricade.Primitive
-        * @instance
-        * @returns {JSON}
-        */
-        toJSON: function () {
-            return this._data;
         }
     });
 

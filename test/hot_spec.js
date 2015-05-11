@@ -31,7 +31,7 @@ describe('HOT', function () {
 
     it('should output the same template that was put in', function () {
         Object.keys(this.templates).forEach(function (name) {
-            var t1 = this.templates[name].toJSON(true),
+            var t1 = this.templates[name].toJSON({ignoreUnused: true}),
                 t2 = TEMPLATES[name];
 
             Object.keys(t1).forEach(function (k) {

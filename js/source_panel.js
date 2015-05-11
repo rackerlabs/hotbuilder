@@ -81,7 +81,8 @@ HotUI.SourcePanel = BaseObject.extend({
         $.ajax({
             type: 'POST',
             url: ENDPOINTS.jsonToYAML,
-            data: {json: JSON.stringify(this.template().toJSON(true))},
+            data: {json: JSON.stringify(
+                             this.template().toJSON({ignoreUnused: true}))},
             success: function (data) {
                 this._cm.setValue(data);
                 this._cm.markClean();

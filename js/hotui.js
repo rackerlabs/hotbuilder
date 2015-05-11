@@ -90,7 +90,8 @@ HotUI.App = BaseObject.extend({
                 url: ENDPOINTS.templateValidate,
                 data: {
                     'endpoint': STACK_ENDPOINT,
-                    'template': JSON.stringify(template().toJSON(true))
+                    'template':
+                        JSON.stringify(template().toJSON({ignoreUnused: true}))
                 },
                 success: function (data) {
                     var passed = typeof data !== 'string';
@@ -105,8 +106,9 @@ HotUI.App = BaseObject.extend({
         }
 
         function downloadTemplate() {
-            var templateJSON = JSON.stringify(template().toJSON(true))
-                                   .replace(/\"/g, '&quot;'),
+            var templateJSON =
+                    JSON.stringify(template().toJSON({ignoreUnused: true}))
+                        .replace(/\"/g, '&quot;'),
                 $form = $(Snippy(
                     '<form method="POST" action="${action}">' +
                         '<input type="hidden" name="json" value="${json}">' +

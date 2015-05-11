@@ -182,8 +182,8 @@ HotUI.HOT = {};
             }
             return searchValue(this.getValue());
         },
-        toJSON: function (ignoreUnused) {
-            return this._value.toJSON(ignoreUnused);
+        toJSON: function (options) {
+            return this._value.toJSON(options);
         }
     });
 
@@ -758,11 +758,11 @@ HotUI.HOT = {};
                     return json;
                 }
             },
-            '@toJSON': function () {
+            '@toJSON': function (options) {
                 if (this.toArray().length === 1) {
-                    return this.get(0).toJSON();
+                    return this.get(0).toJSON(options);
                 }
-                return Barricade.Array.toJSON.call(this);
+                return Barricade.Array.toJSON.call(this, options);
             },
             '*': {'@type': String}
         },
