@@ -267,8 +267,24 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
 
         HOTUI_PREBUILT_CONFIGURATIONS.forEach(function (config) {
             var $config = $(Snippy('<div class="hb_prebuilt_config">' +
-                                   '<img src="${icon}">${name}</div>')(config));
-            $config.click(function () {
+                                   '<img src="${icon}">${name}</div>')(config)),
+                $configDetail = $(Snippy(
+                    '<div class="hb_prebuilt_config_detail">' +
+                        '<div class="hb_detail_arrow"></div>' +
+                        '${desc}' +
+                    '</div>')({
+                        desc: config.template.description || 'No description'
+                    }));
+
+            $config.hover(function () {
+                var offset = $config.offset();
+                $configDetail.css({
+                    left: offset.left + parseFloat($config.css('width')),
+                    top: offset.top
+                }).appendTo('#hotui_overlay');
+            }, function () {
+                $configDetail.remove();
+            }).click(function () {
                 HotUI.UI.Modal.create({
                     title: 'Warning',
                     content: 'This will overwrite your current template!',

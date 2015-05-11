@@ -43,7 +43,7 @@ class IndexView(TemplateView):
                 'path': 'lamp/master/lamp.yaml',
                 'icon': '/static/hotui/img/lamp.png'
             }, {
-                'name': 'WordPress Single-Node',
+                'name': 'WordPress',
                 'path': 'wordpress-single/master/wordpress-single.yaml',
                 'icon': '/static/hotui/img/wordpress-logo.svg'
             }, {
