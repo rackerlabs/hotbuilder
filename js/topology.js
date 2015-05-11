@@ -321,34 +321,21 @@ HotUI.Topology = BaseObject.extend({
     create: function ($container) {
         var self = this.extend({
                 _$container: $container,
-                _width: $container.width(),
-                _height: $container.height(),
                 _onResourceClickCallback: function () {},
                 _nodes: []
-            }),
-            centerX = self._width / 2,
-            centerY = self._height / 2,
-            scale = 1,
-            zoom = d3.behavior.zoom()
-                     .translate([centerX, centerY])
-                     .scale(scale)
-                     .scaleExtent([0.3, 5])
-                     .on('zoom', function () {
-                         self._onZoom(d3.event.translate, d3.event.scale);
-                     });
+            });
 
-        self._svg = d3.select($container[0]).append('svg').attr({
-                width: self._width,
-                height: self._height
-            })
-            .call(zoom);
+        self._zoom = d3.behavior.zoom()
+                 .scaleExtent([0.3, 5])
+                 .on('zoom', function () {
+                     self._onZoom(d3.event.translate, d3.event.scale);
+                 });
 
+        self._svg = d3.select($container[0]).append('svg')
+                                            .call(self._zoom);
         self._topG = self._svg.append('g');
 
-        self._onZoom([centerX, centerY], scale);
-
         self._force = d3.layout.force()
-                               .size([self._width, self._height])
                                .on('tick', function (e) { self._tick(e); })
                                .start();
 
@@ -359,8 +346,12 @@ HotUI.Topology = BaseObject.extend({
         self._updatedResourceCB = function () { self.updatedResource(); };
 
         self.setTieredLayout();
+        self._updateSize();
+        self._onZoom([self._width / 2, self._height / 2], 1);
 
-        $(window).unload(function () {
+        d3.select(window).on('resize', function () {
+            self._updateSize();
+        }).on('unload', function () {
             var positions = {};
             self._nodes.forEach(function (n) {
                 positions[n.resource.getID()] = {
@@ -375,6 +366,13 @@ HotUI.Topology = BaseObject.extend({
         });
 
         return self;
+    },
+    _updateSize: function () {
+        this._width = this._$container.width();
+        this._height = this._$container.height();
+        this._svg.attr({width: this._width, height: this._height});
+        this._force.size([this._width, this._height]);
+        return this;
     },
     setWebLayout: function () {
         this._force.gravity(0.1)
@@ -479,6 +477,9 @@ HotUI.Topology = BaseObject.extend({
     _onZoom: function (translate, scale) {
         this._topG.attr('transform', Snippy(
             'translate(${0})scale(${1})')([translate, scale]));
+
+        this._zoom.translate(translate)
+                  .scale(scale);
 
         this._$container.css({
             backgroundSize: 50 * scale,
