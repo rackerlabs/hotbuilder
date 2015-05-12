@@ -17,7 +17,14 @@ var APP;
 HotUI.App = BaseObject.extend({
     create: function ($container) {
         var self = this.extend({}),
-            templates = (Barricade.create({
+            templates = (Barricade.Array.extend({
+                _doSet: function (i, json) {
+                    addProviderResources(json, function (args) {
+                        console.log('doing set');
+                        Barricade.Array._doSet.apply(this, args);
+                    }.bind(this, arguments));
+                }
+            }, {
                 '@type': Array,
                 '*': {'@class': HotUI.HOT.Template}
             }).create([{}])),
@@ -31,14 +38,45 @@ HotUI.App = BaseObject.extend({
             sourcePanel = HotUI.SourcePanel.create(templates,
                                                    $("#hotui_source_panel"));
 
-        function loadTemplateFromURL(startingURL) {
+        function getTemplateFromURL(url, ajaxOptions) {
+            ajaxOptions.type = 'GET';
+            ajaxOptions.url = ENDPOINTS.urlToJSON;
+            ajaxOptions.data = {url: url};
+            $.ajax(ajaxOptions);
+        }
+
+        function addProviderResources(parentJSON, callback) {
+            var urls = HotUI.HOT.ProviderTemplateHelper.create(parentJSON)
+                                .getProviderTemplateURLs();
+
+            function addProviderResource(i) {
+                if (i === urls.length) {
+                    callback();
+                } else {
+                    getTemplateFromURL(urls[i], {
+                        success: function (data) {
+                            if (typeof data === 'string') {
+                                HotUI.UI.Modal.create({
+                                    title: 'Error loading provider template',
+                                    content: data
+                                }).display();
+                            } else {
+                                HotUI.HOT.ResourceProperties.Custom[urls[i]] =
+                                    HotUI.HOT.createProviderResourceClass(data);
+                                addProviderResource(i + 1);
+                            }
+                        }
+                    });
+                }
+            }
+            addProviderResource(0);
+        }
+
+        function showLoadTemplateModal(startingURL) {
             var url = ko.observable(startingURL || '');
 
             function doLoad() {
-                $.ajax({
-                    type: 'GET',
-                    url: ENDPOINTS.urlToJSON,
-                    data: {url: url()},
+                getTemplateFromURL(url(), {
                     success: function (data) {
                         if (typeof data === 'string') {
                             HotUI.UI.Modal.create({
@@ -49,7 +87,7 @@ HotUI.App = BaseObject.extend({
                                         label: 'Try Again',
                                         cssClass: 'hb_green',
                                         action: function () {
-                                            loadTemplateFromURL(url());
+                                            showLoadTemplateModal(url());
                                         }
                                     }, {
                                         label: 'Give Up'
@@ -149,7 +187,7 @@ HotUI.App = BaseObject.extend({
                 {label: 'Template',
                  action: function () { sidePanel.showTemplate(); }}
             ], [
-                {label: 'Load', action: loadTemplateFromURL},
+                {label: 'Load', action: showLoadTemplateModal},
                 {label: 'Validate', action: validateTemplate},
                 {label: 'Download', action: downloadTemplate},
                 {label: 'Reset', action: resetTemplate},

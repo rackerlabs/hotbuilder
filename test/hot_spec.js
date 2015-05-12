@@ -87,4 +87,14 @@ describe('HOT', function () {
         expect(res2.get('properties').get('resource_def')
                    .get('properties').instanceof(nova)).toBe(true);
     });
+
+    it('ProviderTemplateHelper should retrieve correct URLs', function () {
+        var root = 'https://raw.githubusercontent.com/' +
+                       'rackspace-orchestration-templates/'
+            helper = HotUI.HOT.ProviderTemplateHelper
+                              .create(UNSUPPORTED_TEMPLATES.wp_multi);
+        expect(helper.getProviderTemplateURLs()).toEqual([
+            root + 'wordpress-multi/master/wordpress-web-server.yaml'
+        ]);
+    });
 });

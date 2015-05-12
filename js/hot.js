@@ -652,6 +652,9 @@ HotUI.HOT = {};
     };
 
     hot.Resource = Barricade.ImmutableObject.extend({
+        _endsWith: function (str, suffix) {
+            return str.indexOf(suffix, str.length - suffix.length) !== -1;
+        },
         _getTypeValue: function (typeObj) {
             return typeObj.getValue().instanceof(hot.GetParameter)
                 ? typeObj.getValue().get('get_param').get('default').get()
@@ -667,10 +670,22 @@ HotUI.HOT = {};
             return this._getTypeValue(this.get('type')) ===
                 'OS::Heat::ResourceGroup';
         },
+        isProviderResource: function () {
+            var type = this.getType();
+            return this._endsWith(type, '.yaml') ||
+                   this._endsWith(type, '.template');
+        },
         getType: function () {
             return this._getTypeValue(this.isResourceGroup()
                         ? this.getProperty('resource_def').get('type')
                         : this.get('type'));
+        },
+        getShortType: function () {
+            var type = this.getType();
+            if (this.isProviderResource()) {
+                return type.split('/').pop().split('.')[0];
+            }
+            return type.split('::')[2];
         },
         getAttributes: function () {
             var attributes = this.getProperties().getBackingType()
@@ -998,7 +1013,7 @@ HotUI.HOT = {};
         }
     });
 
-    hot.NestedTemplate = Barricade.ImmutableObject.extend({
+    hot.ProviderTemplate = Barricade.ImmutableObject.extend({
         getSchema: function () {
             function getActualType(type) {
                 var types = {
@@ -1050,14 +1065,39 @@ HotUI.HOT = {};
             }
         }
     });
-}());
 
-function createHOT(resourceTypeObj) {
-    var hot = HotUI.HOT,
-        allResourceTypes,
-        nestedTemplates = HOTUI_NESTED_TEMPLATES;
+    // Used to find URLs of templates to load and turn into child templates
+    hot.ProviderTemplateHelper = hot.Template.extend({
+        getProviderTemplateURLs: function () {
+            return this.get('resources').toArray().filter(function (res) {
+                return res.isProviderResource();
+            }).map(function (res) {
+                return res.getType();
+            });
+        }
+    }, {
+        // Essentially, remove any unncessary reference resolving
+        '@type': Object,
+        'parameter_groups': {'@type': Array, '@required': false},
+        'resources': {
+            '@type': Object,
+            '?': {
+                '@class': hot.Resource.extend({}, {
+                    'properties': {'@type': Object, '@required': false},
+                    'depends_on': {
+                        '@type': Array,
+                        '@required': false,
+                        '@inputMassager': function (json) {
+                            return json instanceof Array ? json : [json];
+                        }
+                    },
+                })
+            }
+        },
+        'outputs': {'@type': Object, '@required': false}
+    });
 
-    function createResourceClass(resourceType) {
+    hot.createResourceClass = function (resourceType) {
         return hot.ResourceProperties.extend({
                 getBackingType: function () {
                     return resourceType;
@@ -1066,25 +1106,36 @@ function createHOT(resourceTypeObj) {
                     HOTUI_RESOURCE_CONNECTIONS[resourceType.getID()] || {}
             },
             resourceType.getSchema());
-    }
+    };
+
+    hot.createProviderResourceClass = function (providerTemplateJSON) {
+        var pTemplate = hot.ProviderTemplate.create(providerTemplateJSON),
+            resType = hot.ResourceType.create(pTemplate.getSchema());
+        return hot.createResourceClass(resType);
+    };
+}());
+
+function createHOT(resourceTypeObj) {
+    var hot = HotUI.HOT,
+        allResourceTypes,
+        providerTemplates = HOTUI_PROVIDER_TEMPLATES;
 
     hot.ResourceProperties.Normal = {};
     hot.ResourceProperties.Custom = {};
 
-    Object.keys(nestedTemplates).forEach(function (name) {
-        var nestedTemplate = hot.NestedTemplate.create(nestedTemplates[name]),
-            resType = hot.ResourceType.create(nestedTemplate.getSchema());
-        hot.ResourceProperties.Custom[name] = createResourceClass(resType);
+    Object.keys(providerTemplates).forEach(function (name) {
+        hot.ResourceProperties.Custom[name] =
+            hot.createProviderResourceClass(providerTemplates[name]);
     });
 
     hot.resourceTypes = hot.ResourceTypes.create(resourceTypeObj);
 
     // null resource type to aid ResourceGroup
     hot.ResourceProperties.Null =
-        createResourceClass(hot.ResourceType.create({}, {id: 'null'}));
+        hot.createResourceClass(hot.ResourceType.create({}, {id: 'null'}));
 
     hot.resourceTypes.toArray().forEach(function (resType) {
         hot.ResourceProperties.Normal[resType.getID()] =
-            createResourceClass(resType);
+            hot.createResourceClass(resType);
     });
 }

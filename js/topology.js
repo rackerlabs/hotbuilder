@@ -260,7 +260,7 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         this.setFixed(this._fixed);
 
         $g.selectAll('.resource_type')
-            .text(this.resource.getType().split('::')[2]);
+            .text(this.resource.getShortType());
     },
     updatePos: function () {
         this.svg.node.attr(

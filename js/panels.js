@@ -117,6 +117,7 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             keyOrder = ['Rackspace', 'OS'],
             $accordion,
             $commonResources,
+            $providerResources,
             $search = $('<input class="hb_search_resources" type="text" ' +
                         'placeholder="Search Resources...">'),
             $html = $('<div class="hb_add_resource"></div>');
@@ -205,9 +206,6 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             resMap[key] = resMap[key].reduce(mapSectionFactory(1), {});
         });
 
-        resMap.Custom =
-            {Custom: Object.keys(HotUI.HOT.ResourceProperties.Custom).sort()};
-
         resMapKeys = keyOrder.concat(
             Object.keys(resMap).sort().filter(function (k) {
                 return keyOrder.indexOf(k) === -1;
@@ -233,6 +231,13 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
             resListHTML += '</div>';
         });
 
+        $providerResources = $(
+            '<div>' +
+            Object.keys(HotUI.HOT.ResourceProperties.Custom).map(
+                function (name) {
+                    return getDraggableHTML(name, name.split('/').pop());
+                }).join('') + '</div>');
+
         $accordion = HotUI.UI.Accordion.create([{
             label: 'Common Resources',
             element: HotUI.UI.Base.extend({
@@ -247,6 +252,13 @@ HotUI.Panel.Home = HotUI.Panel.Base.extend({
                     return $('<div class="hb_more_resources">' +
                              resListHTML +
                              '</div>');
+                }
+            }).create()
+        }, {
+            label: 'Provider Resources',
+            element: HotUI.UI.Base.extend({
+                _doHTML: function () {
+                    return $providerResources;
                 }
             }).create()
         }]);
