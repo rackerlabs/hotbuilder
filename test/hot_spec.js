@@ -26,6 +26,8 @@ describe('HOT', function () {
         var wp_setup = this.templates.wp_single.get('resources')
                                                .getByID('wordpress_setup');
 
+        expect(wp_setup.isResourceGroup()).toBe(false);
+        expect(wp_setup.getType()).toBe('OS::Heat::ChefSolo');
         expect(wp_setup.getIntrinsicFunctions().length).toEqual(25);
     });
 
@@ -44,5 +46,45 @@ describe('HOT', function () {
                 }
             });
         }, this);
+    });
+
+    it('should handle resources with a parameters their type', function () {
+        var json = {
+                "heat_template_version": "2013-05-23",
+                "parameters": {
+                    "resource_type": {
+                        "default": "OS::Nova::Server",
+                        "type": "string",
+                    },
+                },
+                "resources": {
+                    "res1": {
+                        "type": {"get_param": "resource_type"}
+                    },
+                    "res2": {
+                        "type": "OS::Heat::ResourceGroup",
+                        "properties": {
+                            "count": 1,
+                            "resource_def": {
+                                "type": {"get_param": "resource_type"}
+                            }
+                        }
+                    }
+                }
+            },
+            template = HotUI.HOT.Template.create(json),
+            resources = template.get('resources'),
+            res1 = resources.getByID('res1'),
+            res2 = resources.getByID('res2'),
+            nova = HotUI.HOT.ResourceProperties.Normal['OS::Nova::Server'];
+
+        expect(res1.getProperties().instanceof(nova)).toBe(true);
+        expect(res1.isResourceGroup()).toBe(false);
+        expect(res1.getType()).toBe('OS::Nova::Server');
+
+        expect(res2.isResourceGroup()).toBe(true);
+        expect(res2.getType()).toBe('OS::Nova::Server');
+        expect(res2.get('properties').get('resource_def')
+                   .get('properties').instanceof(nova)).toBe(true);
     });
 });

@@ -411,7 +411,11 @@ HotUI.HOT = {};
             if (this.getID() === 'OS::Heat::ResourceGroup') {
                 propertySchema.resource_def = {
                     '@type': Object,
-                    'type': {'@type': String},
+                    'type': {
+                        '@class': hot.ResourcePropertyWrapper.extend({
+                            _innerClass: Barricade.create({'@type': String})
+                        }, {'@required': true})
+                    },
                     'properties': {
                         '@type': Object,
                         '@ref': {
@@ -420,14 +424,20 @@ HotUI.HOT = {};
                                 return hot.ResourceProperties;
                             },
                             getter: function (data) {
-                                return data.needed.get('resource_def')
-                                                  .get('type');
+                                var type = data.needed.get('resource_def')
+                                                      .get('type').getValue();
+                                if (type.instanceof(hot.GetParameter)) {
+                                    type = type.get('get_param');
+                                }
+                                return type;
                             },
                             processor: function (data) {
+                                var type = data.val;
+                                if (type.instanceof(hot.Parameter)) {
+                                    type = type.get('default');
+                                }
                                 return hot.ResourcePropertiesFactory(
-                                    data.standIn.get(),
-                                    undefined,
-                                    data.val.get());
+                                    data.standIn.get(), undefined, type.get());
                             }
                         }
                     }
@@ -642,6 +652,11 @@ HotUI.HOT = {};
     };
 
     hot.Resource = Barricade.ImmutableObject.extend({
+        _getTypeValue: function (typeObj) {
+            return typeObj.getValue().instanceof(hot.GetParameter)
+                ? typeObj.getValue().get('get_param').get('default').get()
+                : typeObj.getValue().get();
+        },
         getProperties: function () {
             return this.get('properties');
         },
@@ -649,12 +664,13 @@ HotUI.HOT = {};
             return this.getProperties().get(property);
         },
         isResourceGroup: function () {
-            return this.get('type').get() === 'OS::Heat::ResourceGroup';
+            return this._getTypeValue(this.get('type')) ===
+                'OS::Heat::ResourceGroup';
         },
         getType: function () {
-            return this.isResourceGroup()
-                ? this.getProperty('resource_def').get('type').get()
-                : this.get('type').get();
+            return this._getTypeValue(this.isResourceGroup()
+                        ? this.getProperty('resource_def').get('type')
+                        : this.get('type'));
         },
         getAttributes: function () {
             var attributes = this.getProperties().getBackingType()
@@ -700,7 +716,7 @@ HotUI.HOT = {};
         },
         _docsBaseURL: "http://docs.rs-heat.com/raxdox/",
         getDocsLink: function () {
-            var resourceType = this.get('type').get(),
+            var resourceType = this.getType(),
                 nameTokens = resourceType.split('::'),
                 resourceBase;
             if (nameTokens[0] === 'OS') {
@@ -717,25 +733,29 @@ HotUI.HOT = {};
     }, {
         '@type': Object,
 
-        'type': {'@type': String},
+        'type': {
+            '@class': hot.ResourcePropertyWrapper.extend({
+                _innerClass: Barricade.create({'@type': String})
+            }, {'@required': true})
+        },
         'properties': {
             '@type': Object,
             '@ref': {
                 to: hot.ResourceProperties,
                 needs: function () { return hot.Resource; },
                 getter: function (data) {
-                    return data.needed.get('type');
+                    var type = data.needed.get('type').getValue();
+                    if (type.instanceof(hot.GetParameter)) {
+                        type = type.get('get_param');
+                    }
+                    return type;
                 },
                 processor: function (data) {
                     var type = data.val;
 
-                    type.on('change', function () {
-                        console.log('type changed to ' + type.get());
-                        data.needed.set(
-                            'properties',
-                            hot.ResourcePropertiesFactory(
-                                undefined, undefined, type.get()));
-                    });
+                    if (type.instanceof(hot.Parameter)) {
+                        type = type.get('default');
+                    }
 
                     return hot.ResourcePropertiesFactory(
                         data.standIn.get(), undefined, type.get());
