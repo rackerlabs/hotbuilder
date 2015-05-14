@@ -263,18 +263,25 @@ var Barricade = (function () {
     */
     Deferrable = Blueprint.create(function (schema) {
         var self = this,
-            deferred;
+            needed,
+            deferred = schema.hasOwnProperty('@ref')
+                ? Deferred.create(schema['@ref'].needs, getter, resolver)
+                : null;
 
-        function resolver(neededValue) {
-            var ref = schema['@ref'].resolver(self, neededValue);
-            if (ref === undefined) {
-                logError('Could not resolve ', JSON.stringify(self.toJSON()));
-            }
-            return ref;
+        if (schema.hasOwnProperty('@ref') && !schema['@ref'].processor) {
+            schema['@ref'].processor = function (o) { return o.val; };
         }
 
-        if (schema.hasOwnProperty('@ref')) {
-            deferred = Deferred.create(schema['@ref'].needs, resolver);
+        function getter(neededVal) {
+            return schema['@ref'].getter({standIn: self, needed: neededVal});
+        }
+
+        function resolver(retrievedValue) {
+            self.emit('replace', schema['@ref'].processor({
+                val: retrievedValue,
+                standIn: self,
+                needed: needed
+            }));
         }
 
         this.resolveWith = function (obj) {
@@ -282,7 +289,8 @@ var Barricade = (function () {
 
             if (deferred && !deferred.isResolved()) {
                 if (deferred.needs(obj)) {
-                    this.emit('replace', deferred.resolve(obj));
+                    needed = obj;
+                    deferred.resolve(obj);
                 } else {
                     allResolved = false;
                 }
@@ -297,6 +305,10 @@ var Barricade = (function () {
             }
 
             return allResolved;
+        };
+
+        this.isPlaceholder = function () {
+            return !!deferred;
         };
     });
 
@@ -407,7 +419,7 @@ var Barricade = (function () {
         this.emit = function (eventName) {
             var args = arguments; // Must come from correct scope
             if (events.hasOwnProperty(eventName)) {
-                events[eventName].forEach(function (callback) {
+                events[eventName].slice().forEach(function (callback) {
                     // Call with emitter as context and pass all but eventName
                     callback.apply(this, Array.prototype.slice.call(args, 1));
                 }, this);
@@ -469,10 +481,11 @@ var Barricade = (function () {
                  Callback to execute when resolve happens.
         * @returns {Barricade.Deferred}
         */
-        create: function (classGetter, onResolve) {
+        create: function (classGetter, getter, onResolve) {
             var self = Object.create(this);
             self._isResolved = false;
             self._classGetter = classGetter;
+            self._getter = getter;
             self._onResolve = onResolve;
             return self;
         },
@@ -502,17 +515,25 @@ var Barricade = (function () {
         * @param obj
         */
         resolve: function (obj) {
-            var ref;
+            var self = this,
+                neededValue;
+
+            function doResolve(realNeededValue) {
+                neededValue.off('replace', doResolve);
+                self._onResolve(realNeededValue);
+                self._isResolved = true;
+            }
 
             if (this._isResolved) {
                 throw new Error('Deferred already resolved');
             }
 
-            ref = this._onResolve(obj);
+            neededValue = this._getter(obj);
 
-            if (ref !== undefined) {
-                this._isResolved = true;
-                return ref;
+            if (neededValue.isPlaceholder()) {
+                neededValue.on('replace', doResolve);
+            } else {
+                doResolve(neededValue);
             }
         }
     };

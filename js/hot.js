@@ -419,22 +419,15 @@ HotUI.HOT = {};
                             needs: function () {
                                 return hot.ResourceProperties;
                             },
-                            resolver: function (json, properties) {
-                                var type = properties.get('resource_def')
-                                                     .get('type');
-                                type.on('change', function () {
-                                    console.log('resource def changed to ' +
-                                                type.get());
-                                    properties
-                                        .get('resource_def')
-                                        .set('properties',
-                                             hot.ResourcePropertiesFactory(
-                                                 undefined, undefined,
-                                                 type.get()));
-                                });
-
+                            getter: function (data) {
+                                return data.needed.get('resource_def')
+                                                  .get('type');
+                            },
+                            processor: function (data) {
                                 return hot.ResourcePropertiesFactory(
-                                           json.get(), undefined, type.get());
+                                    data.standIn.get(),
+                                    undefined,
+                                    data.val.get());
                             }
                         }
                     }
@@ -512,8 +505,9 @@ HotUI.HOT = {};
             '@ref': {
                 to: function () { return hot.Resource; },
                 needs: function () { return hot.Template; },
-                resolver: function (json, template) {
-                    return template.get('resources').getByID(json.get());
+                getter: function (data) {
+                    return data.needed.get('resources')
+                                      .getByID(data.standIn.get());
                 }
             }
         }
@@ -556,9 +550,9 @@ HotUI.HOT = {};
                 '@ref': {
                     to: function () { return hot.Resource; },
                     needs: function () { return hot.Template; },
-                    resolver: function (json, template) {
-                        return template.get('resources')
-                                       .getByID(json.get());
+                    getter: function (data) {
+                        return data.needed.get('resources')
+                                          .getByID(data.standIn.get());
                     }
                 }
             },
@@ -581,8 +575,9 @@ HotUI.HOT = {};
             '@ref': {
                 to: function () { return hot.Parameter; },
                 needs: function () { return hot.Template; },
-                resolver: function (json, template) {
-                    return template.get('parameters').getByID(json.get());
+                getter: function (data) {
+                    return data.needed.get('parameters')
+                                      .getByID(data.standIn.get());
                 }
             }
         }
@@ -728,19 +723,22 @@ HotUI.HOT = {};
             '@ref': {
                 to: hot.ResourceProperties,
                 needs: function () { return hot.Resource; },
-                resolver: function (json, resource) {
-                    var type = resource.get('type');
+                getter: function (data) {
+                    return data.needed.get('type');
+                },
+                processor: function (data) {
+                    var type = data.val;
 
                     type.on('change', function () {
                         console.log('type changed to ' + type.get());
-                        resource.set('properties',
-                                     hot.ResourcePropertiesFactory(undefined,
-                                                                   undefined,
-                                                                   type.get()));
+                        data.needed.set(
+                            'properties',
+                            hot.ResourcePropertiesFactory(
+                                undefined, undefined, type.get()));
                     });
 
-                    return hot.ResourcePropertiesFactory(json.get(), undefined,
-                                                         type.get());
+                    return hot.ResourcePropertiesFactory(
+                        data.standIn.get(), undefined, type.get());
                 }
             }
         },
@@ -880,7 +878,10 @@ HotUI.HOT = {};
             '@ref': {
                 to: hot.ParameterDefault,
                 needs: function () { return hot.Parameter; },
-                resolver: function (json, parameter) {
+                getter: function (data) {
+                    return data.needed.get('type');
+                },
+                processor: function (data) {
                     var types = {
                             'string': hot.StringParameterDefault,
                             '': hot.StringParameterDefault,
@@ -890,9 +891,9 @@ HotUI.HOT = {};
                             'json': hot.ObjectParameterDefault,
                             'boolean': hot.BooleanParameterDefault,
                         },
-                        type = parameter.get('type').get();
+                        type = data.val.get();
 
-                    return types[type].create(json.get().value);
+                    return types[type].create(data.standIn.get().value);
                 }
             }
         },
@@ -929,9 +930,9 @@ HotUI.HOT = {};
                 '@ref': {
                     to: hot.Parameter,
                     needs: function () { return hot.Template; },
-                    resolver: function (json, template) {
-                        return template.get('parameters')
-                                       .getByID(json.get());
+                    getter: function (data) {
+                        return data.needed.get('parameters')
+                                          .getByID(data.standIn.get());
                     }
                 }
             }
