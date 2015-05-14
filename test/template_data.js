@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var TEMPLATES = {};
+var TEMPLATES = {},
+    UNSUPPORTED_TEMPLATES = {};
 
 TEMPLATES.lamp_single = {
     "parameter_groups": [
@@ -2053,6 +2054,1187 @@ TEMPLATES.drupal_single = {
             "properties": {
                 "length": 16,
                 "sequence": "lettersdigits"
+            }
+        }
+    }
+};
+
+UNSUPPORTED_TEMPLATES.wp_multi = {
+    "parameter_groups": [
+        {
+            "parameters": [
+                "image"
+            ],
+            "label": "Server Settings"
+        },
+        {
+            "parameters": [
+                "wp_master_server_flavor",
+                "wp_web_server_count",
+                "wp_web_server_flavor"
+            ],
+            "label": "Web Server Settings"
+        },
+        {
+            "parameters": [
+                "database_server_flavor"
+            ],
+            "label": "Database Settings"
+        },
+        {
+            "parameters": [
+                "domain",
+                "username"
+            ],
+            "label": "WordPress Settings"
+        },
+        {
+            "parameters": [
+                "kitchen",
+                "chef_version",
+                "child_template",
+                "version",
+                "prefix",
+                "load_balancer_hostname",
+                "wp_web_server_hostnames",
+                "wp_master_server_hostname",
+                "database_server_hostname"
+            ],
+            "label": "rax-dev-params"
+        }
+    ],
+    "heat_template_version": "2013-05-23",
+    "description": "This is a Heat template to deploy Load Balanced WordPress servers with a\nbackend database server.\n",
+    "parameters": {
+        "username": {
+            "default": "wp_user",
+            "label": "Username",
+            "type": "string",
+            "description": "Username for system, database, and WordPress logins.",
+            "constraints": [
+                {
+                    "allowed_pattern": "^[a-zA-Z0-9 _.@-]{1,16}$",
+                    "description": "Must be shorter than 16 characters and may only contain alphanumeric\ncharacters, ' ', '_', '.', '@', and/or '-'.\n"
+                }
+            ]
+        },
+        "domain": {
+            "default": "example.com",
+            "label": "Site Domain",
+            "type": "string",
+            "description": "Domain to be used with this WordPress site",
+            "constraints": [
+                {
+                    "allowed_pattern": "^[a-zA-Z0-9.-]{1,255}.[a-zA-Z]{2,15}$",
+                    "description": "Must be a valid domain name"
+                }
+            ]
+        },
+        "wp_web_server_flavor": {
+            "default": "2 GB General Purpose v1",
+            "label": "Node Server Size",
+            "type": "string",
+            "description": "Cloud Server size to use on all of the additional web nodes.\n",
+            "constraints": [
+                {
+                    "description": "Must be a valid Rackspace Cloud Server flavor for the region you have\nselected to deploy into.\n",
+                    "allowed_values": [
+                        "1 GB General Purpose v1",
+                        "2 GB General Purpose v1",
+                        "4 GB General Purpose v1",
+                        "8 GB General Purpose v1",
+                        "15 GB I/O v1",
+                        "30 GB I/O v1",
+                        "1GB Standard Instance",
+                        "2GB Standard Instance",
+                        "4GB Standard Instance",
+                        "8GB Standard Instance",
+                        "15GB Standard Instance",
+                        "30GB Standard Instance"
+                    ]
+                }
+            ]
+        },
+        "wp_web_server_hostnames": {
+            "default": "WordPress-Web%index%",
+            "label": "Server Name",
+            "type": "string",
+            "description": "Hostname to use for all additional WordPress web nodes",
+            "constraints": [
+                {
+                    "length": {
+                        "max": 64,
+                        "min": 1
+                    }
+                },
+                {
+                    "allowed_pattern": "^[a-zA-Z][a-zA-Z0-9%-]*$",
+                    "description": "Must begin with a letter and contain only alphanumeric characters.\n"
+                }
+            ]
+        },
+        "image": {
+            "default": "Ubuntu 12.04 LTS (Precise Pangolin) (PVHVM)",
+            "label": "Operating System",
+            "type": "string",
+            "description": "Required: Server image used for all servers that are created as a part of\nthis deployment.\n",
+            "constraints": [
+                {
+                    "description": "Must be a supported operating system.",
+                    "allowed_values": [
+                        "Ubuntu 12.04 LTS (Precise Pangolin) (PVHVM)"
+                    ]
+                }
+            ]
+        },
+        "child_template": {
+            "default": "https://raw.githubusercontent.com/rackspace-orchestration-templates/wordpress-multi/master/wordpress-web-server.yaml",
+            "type": "string",
+            "description": "Location of the child template to use for the WordPress web servers\n",
+            "label": "Child Template"
+        },
+        "load_balancer_hostname": {
+            "default": "WordPress-Load-Balancer",
+            "label": "Load Balancer Hostname",
+            "type": "string",
+            "description": "Hostname for the Cloud Load Balancer",
+            "constraints": [
+                {
+                    "length": {
+                        "max": 64,
+                        "min": 1
+                    }
+                },
+                {
+                    "allowed_pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
+                    "description": "Must begin with a letter and contain only alphanumeric characters.\n"
+                }
+            ]
+        },
+        "prefix": {
+            "default": "wp_",
+            "label": "Wordpress Prefix",
+            "type": "string",
+            "description": "Prefix to use for database table names.",
+            "constraints": [
+                {
+                    "allowed_pattern": "^[0-9a-zA-Z$_]{0,10}$",
+                    "description": "Prefix must be shorter than 10 characters, and can only include\nletters, numbers, $, and/or underscores.\n"
+                }
+            ]
+        },
+        "database_server_flavor": {
+            "default": "4 GB General Purpose v1",
+            "label": "Server Size",
+            "type": "string",
+            "description": "Cloud Server size to use for the database server. Sizes refer to the\namount of RAM allocated to the server.\n",
+            "constraints": [
+                {
+                    "description": "Must be a valid Rackspace Cloud Server flavor for the region you have\nselected to deploy into.\n",
+                    "allowed_values": [
+                        "2 GB General Purpose v1",
+                        "4 GB General Purpose v1",
+                        "8 GB General Purpose v1",
+                        "15 GB I/O v1",
+                        "30 GB I/O v1",
+                        "2GB Standard Instance",
+                        "4GB Standard Instance",
+                        "8GB Standard Instance",
+                        "15GB Standard Instance",
+                        "30GB Standard Instance"
+                    ]
+                }
+            ]
+        },
+        "kitchen": {
+            "default": "https://github.com/rackspace-orchestration-templates/wordpress-multi",
+            "type": "string",
+            "description": "URL for the kitchen to use, fetched using git\n",
+            "label": "Kitchen"
+        },
+        "database_server_hostname": {
+            "default": "WordPress-Database",
+            "label": "Server Name",
+            "type": "string",
+            "description": "Hostname to use for your WordPress Database Server",
+            "constraints": [
+                {
+                    "length": {
+                        "max": 64,
+                        "min": 1
+                    }
+                },
+                {
+                    "allowed_pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
+                    "description": "Must begin with a letter and contain only alphanumeric characters.\n"
+                }
+            ]
+        },
+        "database_name": {
+            "default": "wordpress",
+            "label": "Database Name",
+            "type": "string",
+            "description": "WordPress database name",
+            "constraints": [
+                {
+                    "allowed_pattern": "^[0-9a-zA-Z$_]{1,64}$",
+                    "description": "Maximum length of 64 characters, may only contain letters, numbers, and\nunderscores.\n"
+                }
+            ]
+        },
+        "wp_master_server_hostname": {
+            "default": "WordPress-Master",
+            "label": "Server Name",
+            "type": "string",
+            "description": "Hostname to use for your WordPress web-master server.",
+            "constraints": [
+                {
+                    "length": {
+                        "max": 64,
+                        "min": 1
+                    }
+                },
+                {
+                    "allowed_pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
+                    "description": "Must begin with a letter and contain only alphanumeric characters.\n"
+                }
+            ]
+        },
+        "wp_web_server_count": {
+            "default": 1,
+            "label": "Web Server Count",
+            "type": "number",
+            "description": "Number of web servers to deploy in addition to the web-master",
+            "constraints": [
+                {
+                    "range": {
+                        "max": 7,
+                        "min": 0
+                    },
+                    "description": "Must be between 0 and 7 servers."
+                }
+            ]
+        },
+        "version": {
+            "default": "4.2.2",
+            "label": "WordPress Version",
+            "type": "string",
+            "description": "Version of WordPress to install",
+            "constraints": [
+                {
+                    "allowed_values": [
+                        "4.2.2"
+                    ]
+                }
+            ]
+        },
+        "wp_master_server_flavor": {
+            "default": "2 GB General Purpose v1",
+            "label": "Master Server Size",
+            "type": "string",
+            "description": "Cloud Server size to use for the web-master node. The size should be at\nleast one size larger than what you use for the web nodes. This server\nhandles all admin calls and will ensure files are synced across all\nother nodes.\n",
+            "constraints": [
+                {
+                    "description": "Must be a valid Rackspace Cloud Server flavor for the region you have\nselected to deploy into.\n",
+                    "allowed_values": [
+                        "1 GB General Purpose v1",
+                        "2 GB General Purpose v1",
+                        "4 GB General Purpose v1",
+                        "8 GB General Purpose v1",
+                        "15 GB I/O v1",
+                        "30 GB I/O v1",
+                        "1GB Standard Instance",
+                        "2GB Standard Instance",
+                        "4GB Standard Instance",
+                        "8GB Standard Instance",
+                        "15GB Standard Instance",
+                        "30GB Standard Instance"
+                    ]
+                }
+            ]
+        },
+        "chef_version": {
+            "default": "11.16.2",
+            "type": "string",
+            "description": "Version of chef client to use",
+            "label": "Chef Version"
+        }
+    },
+    "outputs": {
+        "private_key": {
+            "description": "SSH Private IP",
+            "value": {
+                "get_attr": [
+                    "ssh_key",
+                    "private_key"
+                ]
+            }
+        },
+        "load_balancer_ip": {
+            "description": "Load Balancer IP",
+            "value": {
+                "get_attr": [
+                    "load_balancer",
+                    "PublicIp"
+                ]
+            }
+        },
+        "mysql_root_password": {
+            "description": "MySQL Root Password",
+            "value": {
+                "get_attr": [
+                    "mysql_root_password",
+                    "value"
+                ]
+            }
+        },
+        "wordpress_user": {
+            "description": "WordPress User",
+            "value": {
+                "get_param": "username"
+            }
+        },
+        "wordpress_web_ips": {
+            "description": "Web Server IPs",
+            "value": {
+                "get_attr": [
+                    "wp_web_servers",
+                    "accessIPv4"
+                ]
+            }
+        },
+        "wordpress_password": {
+            "description": "WordPress Password",
+            "value": {
+                "get_attr": [
+                    "database_password",
+                    "value"
+                ]
+            }
+        },
+        "database_server_ip": {
+            "description": "Database Server IP",
+            "value": {
+                "get_attr": [
+                    "database_server",
+                    "accessIPv4"
+                ]
+            }
+        },
+        "wordpress_web_master_ip": {
+            "description": "Web-Master IP",
+            "value": {
+                "get_attr": [
+                    "wp_master_server",
+                    "accessIPv4"
+                ]
+            }
+        }
+    },
+    "resources": {
+        "load_balancer": {
+            "depends_on": [
+                "wp_master_server_setup",
+                "wp_web_servers"
+            ],
+            "type": "Rackspace::Cloud::LoadBalancer",
+            "properties": {
+                "protocol": "HTTP",
+                "name": {
+                    "get_param": "load_balancer_hostname"
+                },
+                "algorithm": "ROUND_ROBIN",
+                "virtualIps": [
+                    {
+                        "ipVersion": "IPV4",
+                        "type": "PUBLIC"
+                    }
+                ],
+                "contentCaching": "ENABLED",
+                "healthMonitor": {
+                    "attemptsBeforeDeactivation": 2,
+                    "delay": 10,
+                    "statusRegex": "^[23]0[0-2]$",
+                    "timeout": 5,
+                    "path": "/",
+                    "type": "HTTP"
+                },
+                "nodes": [
+                    {
+                        "addresses": [
+                            {
+                                "get_attr": [
+                                    "wp_master_server",
+                                    "networks",
+                                    "private",
+                                    0
+                                ]
+                            }
+                        ],
+                        "condition": "ENABLED",
+                        "port": 80
+                    },
+                    {
+                        "addresses": {
+                            "get_attr": [
+                                "wp_web_servers",
+                                "privateIPv4"
+                            ]
+                        },
+                        "condition": "ENABLED",
+                        "port": 80
+                    }
+                ],
+                "port": 80,
+                "metadata": {
+                    "rax-heat": {
+                        "get_param": "OS::stack_id"
+                    }
+                }
+            }
+        },
+        "sync_key": {
+            "type": "OS::Nova::KeyPair",
+            "properties": {
+                "name": {
+                    "str_replace": {
+                        "params": {
+                            "%stack_id%": {
+                                "get_param": "OS::stack_id"
+                            }
+                        },
+                        "template": "%stack_id%-sync"
+                    }
+                },
+                "save_private_key": true
+            }
+        },
+        "database_server": {
+            "type": "OS::Nova::Server",
+            "properties": {
+                "key_name": {
+                    "get_resource": "ssh_key"
+                },
+                "flavor": {
+                    "get_param": "database_server_flavor"
+                },
+                "name": {
+                    "get_param": "database_server_hostname"
+                },
+                "image": {
+                    "get_param": "image"
+                },
+                "metadata": {
+                    "rax-heat": {
+                        "get_param": "OS::stack_id"
+                    }
+                }
+            }
+        },
+        "wp_master_server": {
+            "type": "OS::Nova::Server",
+            "properties": {
+                "user_data_format": "RAW",
+                "name": {
+                    "get_param": "wp_master_server_hostname"
+                },
+                "key_name": {
+                    "get_resource": "ssh_key"
+                },
+                "image": {
+                    "get_param": "image"
+                },
+                "user_data": {
+                    "get_attr": [
+                        "cloud_monitoring_config",
+                        "config"
+                    ]
+                },
+                "flavor": {
+                    "get_param": "wp_master_server_flavor"
+                },
+                "config_drive": true,
+                "metadata": {
+                    "rax-heat": {
+                        "get_param": "OS::stack_id"
+                    }
+                }
+            }
+        },
+        "mysql_debian_password": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 16,
+                "sequence": "lettersdigits"
+            }
+        },
+        "ssh_key": {
+            "type": "OS::Nova::KeyPair",
+            "properties": {
+                "name": {
+                    "get_param": "OS::stack_id"
+                },
+                "save_private_key": true
+            }
+        },
+        "master_filesystem_check": {
+            "type": "Rackspace::CloudMonitoring::Check",
+            "properties": {
+                "metadata": {
+                    "rax-heat": {
+                        "get_param": "OS::stack_id"
+                    },
+                    "stack-name": {
+                        "get_param": "OS::stack_name"
+                    }
+                },
+                "details": {
+                    "target": "/"
+                },
+                "timeout": 10,
+                "entity": {
+                    "get_resource": "wp_master_server"
+                },
+                "type": "agent.filesystem",
+                "period": 30,
+                "label": "master_fs_check"
+            }
+        },
+        "wp_auth": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 32,
+                "sequence": "hexdigits"
+            }
+        },
+        "database_password": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 16,
+                "sequence": "lettersdigits"
+            }
+        },
+        "wp_logged_in": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 32,
+                "sequence": "hexdigits"
+            }
+        },
+        "mysql_repl_password": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 16,
+                "sequence": "lettersdigits"
+            }
+        },
+        "cloud_monitoring_config": {
+            "type": "OS::Heat::SoftwareConfig",
+            "properties": {
+                "config": {
+                    "str_replace": {
+                        "params": {
+                            "{{token}}": {
+                                "get_resource": "agent_token"
+                            }
+                        },
+                        "template": "#!/bin/bash\nwget http://meta.packages.cloudmonitoring.rackspace.com/ubuntu-12.04-x86_64/rackspace-cloud-monitoring-meta-stable_1.0_all.deb\ndpkg -i rackspace-cloud-monitoring-meta-stable_1.0_all.deb\napt-get update\napt-get install rackspace-monitoring-agent\necho \"monitoring_token {{token}}\" > /etc/rackspace-monitoring-agent.cfg\nservice rackspace-monitoring-agent restart\n"
+                    }
+                }
+            }
+        },
+        "master_cpu_check": {
+            "type": "Rackspace::CloudMonitoring::Check",
+            "properties": {
+                "metadata": {
+                    "rax-heat": {
+                        "get_param": "OS::stack_id"
+                    },
+                    "stack-name": {
+                        "get_param": "OS::stack_name"
+                    }
+                },
+                "details": {},
+                "timeout": 10,
+                "entity": {
+                    "get_resource": "wp_master_server"
+                },
+                "type": "agent.cpu",
+                "period": 30,
+                "label": "master_cpu_check"
+            }
+        },
+        "wp_master_server_setup": {
+            "depends_on": [
+                "database_server_setup",
+                "wp_web_servers"
+            ],
+            "type": "OS::Heat::ChefSolo",
+            "properties": {
+                "username": "root",
+                "node": {
+                    "varnish": {
+                        "version": "3.0",
+                        "listen_port": "80"
+                    },
+                    "sysctl": {
+                        "values": {
+                            "fs.inotify.max_user_watches": 1000000
+                        }
+                    },
+                    "lsyncd": {
+                        "interval": 5
+                    },
+                    "monit": {
+                        "mail_format": {
+                            "from": "monit@localhost"
+                        },
+                        "notify_email": "root@localhost"
+                    },
+                    "vsftpd": {
+                        "hide_ids": false,
+                        "chroot_local_user": false,
+                        "ssl_enable": true,
+                        "ssl_ciphers": "AES256-SHA",
+                        "write_enable": true,
+                        "ipaddress": "",
+                        "local_umask": "002"
+                    },
+                    "wordpress": {
+                        "keys": {
+                            "logged_in": {
+                                "get_attr": [
+                                    "wp_logged_in",
+                                    "value"
+                                ]
+                            },
+                            "secure_auth_key": {
+                                "get_attr": [
+                                    "wp_secure_auth",
+                                    "value"
+                                ]
+                            },
+                            "nonce_key": {
+                                "get_attr": [
+                                    "wp_nonce",
+                                    "value"
+                                ]
+                            },
+                            "auth": {
+                                "get_attr": [
+                                    "wp_auth",
+                                    "value"
+                                ]
+                            }
+                        },
+                        "server_aliases": [
+                            {
+                                "get_param": "domain"
+                            }
+                        ],
+                        "version": {
+                            "get_param": "version"
+                        },
+                        "db": {
+                            "user": {
+                                "get_param": "username"
+                            },
+                            "host": {
+                                "get_attr": [
+                                    "database_server",
+                                    "networks",
+                                    "private",
+                                    0
+                                ]
+                            },
+                            "name": {
+                                "get_param": "database_name"
+                            },
+                            "pass": {
+                                "get_attr": [
+                                    "database_password",
+                                    "value"
+                                ]
+                            }
+                        },
+                        "dir": {
+                            "str_replace": {
+                                "params": {
+                                    "%domain%": {
+                                        "get_param": "domain"
+                                    }
+                                },
+                                "template": "/var/www/vhosts/%domain%"
+                            }
+                        }
+                    },
+                    "run_list": [
+                        "recipe[apt]",
+                        "recipe[build-essential]",
+                        "recipe[mysql::client]",
+                        "recipe[mysql-chef_gem]",
+                        "recipe[rax-wordpress::apache-prep]",
+                        "recipe[sysctl::attribute_driver]",
+                        "recipe[rax-wordpress::x509]",
+                        "recipe[php]",
+                        "recipe[rax-install-packages]",
+                        "recipe[rax-wordpress::wp-database]",
+                        "recipe[wordpress]",
+                        "recipe[rax-wordpress::wp-setup]",
+                        "recipe[rax-wordpress::user]",
+                        "recipe[rax-wordpress::memcache]",
+                        "recipe[lsyncd]",
+                        "recipe[vsftpd]",
+                        "recipe[rax-wordpress::vsftpd]",
+                        "recipe[varnish::repo]",
+                        "recipe[varnish]",
+                        "recipe[rax-wordpress::apache]",
+                        "recipe[rax-wordpress::varnish]",
+                        "recipe[rax-wordpress::varnish-firewall]",
+                        "recipe[rax-wordpress::firewall]",
+                        "recipe[rax-wordpress::vsftpd-firewall]",
+                        "recipe[rax-wordpress::lsyncd]"
+                    ],
+                    "mysql": {
+                        "server_root_password": {
+                            "get_attr": [
+                                "mysql_root_password",
+                                "value"
+                            ]
+                        },
+                        "bind_address": {
+                            "get_attr": [
+                                "mysql_root_password",
+                                "value"
+                            ]
+                        }
+                    },
+                    "apache": {
+                        "listen_ports": [
+                            8080
+                        ],
+                        "serversignature": "Off",
+                        "traceenable": "Off",
+                        "timeout": 30
+                    },
+                    "rax": {
+                        "varnish": {
+                            "master_backend": "localhost"
+                        },
+                        "memcache": {
+                            "server": {
+                                "get_attr": [
+                                    "database_server",
+                                    "networks",
+                                    "private",
+                                    0
+                                ]
+                            }
+                        },
+                        "wordpress": {
+                            "admin_pass": {
+                                "get_attr": [
+                                    "database_password",
+                                    "value"
+                                ]
+                            },
+                            "admin_user": {
+                                "get_param": "username"
+                            },
+                            "user": {
+                                "group": {
+                                    "get_param": "username"
+                                },
+                                "name": {
+                                    "get_param": "username"
+                                }
+                            }
+                        },
+                        "lsyncd": {
+                            "clients": {
+                                "get_attr": [
+                                    "wp_web_servers",
+                                    "privateIPv4"
+                                ]
+                            },
+                            "ssh": {
+                                "private_key": {
+                                    "get_attr": [
+                                        "sync_key",
+                                        "private_key"
+                                    ]
+                                }
+                            }
+                        },
+                        "apache": {
+                            "domain": {
+                                "get_param": "domain"
+                            }
+                        },
+                        "packages": [
+                            "php5-imagick"
+                        ]
+                    }
+                },
+                "private_key": {
+                    "get_attr": [
+                        "ssh_key",
+                        "private_key"
+                    ]
+                },
+                "kitchen": {
+                    "get_param": "kitchen"
+                },
+                "host": {
+                    "get_attr": [
+                        "wp_master_server",
+                        "accessIPv4"
+                    ]
+                },
+                "chef_version": {
+                    "get_param": "chef_version"
+                }
+            }
+        },
+        "wp_web_servers": {
+            "depends_on": "database_server",
+            "type": "OS::Heat::ResourceGroup",
+            "properties": {
+                "count": {
+                    "get_param": "wp_web_server_count"
+                },
+                "resource_def": {
+                    "type": {
+                        "get_param": "child_template"
+                    },
+                    "properties": {
+                        "username": {
+                            "get_param": "username"
+                        },
+                        "domain": {
+                            "get_param": "domain"
+                        },
+                        "wp_web_server_flavor": {
+                            "get_param": "wp_web_server_flavor"
+                        },
+                        "image": {
+                            "get_param": "image"
+                        },
+                        "wp_auth": {
+                            "get_attr": [
+                                "wp_auth",
+                                "value"
+                            ]
+                        },
+                        "memcached_host": {
+                            "get_attr": [
+                                "database_server",
+                                "networks",
+                                "private",
+                                0
+                            ]
+                        },
+                        "prefix": {
+                            "get_param": "prefix"
+                        },
+                        "ssh_private_key": {
+                            "get_attr": [
+                                "ssh_key",
+                                "private_key"
+                            ]
+                        },
+                        "parent_stack_id": {
+                            "get_param": "OS::stack_id"
+                        },
+                        "lsync_pub": {
+                            "get_attr": [
+                                "sync_key",
+                                "public_key"
+                            ]
+                        },
+                        "kitchen": {
+                            "get_param": "kitchen"
+                        },
+                        "wp_secure_auth": {
+                            "get_attr": [
+                                "wp_secure_auth",
+                                "value"
+                            ]
+                        },
+                        "ssh_keypair_name": {
+                            "get_resource": "ssh_key"
+                        },
+                        "wp_logged_in": {
+                            "get_attr": [
+                                "wp_logged_in",
+                                "value"
+                            ]
+                        },
+                        "database_name": {
+                            "get_param": "database_name"
+                        },
+                        "wp_nonce": {
+                            "get_attr": [
+                                "wp_nonce",
+                                "value"
+                            ]
+                        },
+                        "database_host": {
+                            "get_attr": [
+                                "database_server",
+                                "networks",
+                                "private",
+                                0
+                            ]
+                        },
+                        "agent_config": {
+                            "get_attr": [
+                                "cloud_monitoring_config",
+                                "config"
+                            ]
+                        },
+                        "wp_web_server_hostname": {
+                            "get_param": "wp_web_server_hostnames"
+                        },
+                        "version": {
+                            "get_param": "version"
+                        },
+                        "ssh_public_key": {
+                            "get_attr": [
+                                "ssh_key",
+                                "public_key"
+                            ]
+                        },
+                        "database_password": {
+                            "get_attr": [
+                                "database_password",
+                                "value"
+                            ]
+                        },
+                        "chef_version": {
+                            "get_param": "chef_version"
+                        },
+                        "varnish_master_backend": {
+                            "get_attr": [
+                                "wp_master_server",
+                                "networks",
+                                "private",
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "wp_secure_auth": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 32,
+                "sequence": "hexdigits"
+            }
+        },
+        "mysql_root_password": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 16,
+                "sequence": "lettersdigits"
+            }
+        },
+        "wp_nonce": {
+            "type": "OS::Heat::RandomString",
+            "properties": {
+                "length": 32,
+                "sequence": "hexdigits"
+            }
+        },
+        "database_server_firewall": {
+            "depends_on": "wp_master_server_setup",
+            "type": "OS::Heat::ChefSolo",
+            "properties": {
+                "username": "root",
+                "node": {
+                    "rax": {
+                        "memcached": {
+                            "clients": [
+                                {
+                                    "get_attr": [
+                                        "wp_master_server",
+                                        "networks",
+                                        "private",
+                                        0
+                                    ]
+                                },
+                                {
+                                    "get_attr": [
+                                        "wp_web_servers",
+                                        "privateIPv4"
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    "run_list": [
+                        "recipe[rax-wordpress::memcached-firewall]"
+                    ]
+                },
+                "private_key": {
+                    "get_attr": [
+                        "ssh_key",
+                        "private_key"
+                    ]
+                },
+                "kitchen": {
+                    "get_param": "kitchen"
+                },
+                "host": {
+                    "get_attr": [
+                        "database_server",
+                        "accessIPv4"
+                    ]
+                },
+                "chef_version": {
+                    "get_param": "chef_version"
+                }
+            }
+        },
+        "database_server_setup": {
+            "depends_on": "database_server",
+            "type": "OS::Heat::ChefSolo",
+            "properties": {
+                "username": "root",
+                "node": {
+                    "mysql": {
+                        "bind_address": {
+                            "get_attr": [
+                                "database_server",
+                                "networks",
+                                "private",
+                                0
+                            ]
+                        },
+                        "remove_test_database": true,
+                        "root_network_acl": [
+                            "10.%"
+                        ],
+                        "server_debian_password": {
+                            "get_attr": [
+                                "mysql_debian_password",
+                                "value"
+                            ]
+                        },
+                        "server_root_password": {
+                            "get_attr": [
+                                "mysql_root_password",
+                                "value"
+                            ]
+                        },
+                        "server_repl_password": {
+                            "get_attr": [
+                                "mysql_repl_password",
+                                "value"
+                            ]
+                        },
+                        "remove_anonymous_users": true
+                    },
+                    "memcached": {
+                        "memory": 500,
+                        "listen": {
+                            "get_attr": [
+                                "database_server",
+                                "networks",
+                                "private",
+                                0
+                            ]
+                        }
+                    },
+                    "hollandbackup": {
+                        "main": {
+                            "mysqldump": {
+                                "host": "localhost",
+                                "password": {
+                                    "get_attr": [
+                                        "mysql_root_password",
+                                        "value"
+                                    ]
+                                },
+                                "user": "root"
+                            },
+                            "backup_directory": "/var/lib/mysqlbackup"
+                        }
+                    },
+                    "run_list": [
+                        "recipe[apt]",
+                        "recipe[build-essential]",
+                        "recipe[rax-firewall]",
+                        "recipe[mysql::server]",
+                        "recipe[rax-wordpress::memcached-firewall]",
+                        "recipe[memcached]",
+                        "recipe[rax-wordpress::mysql]",
+                        "recipe[rax-wordpress::mysql-firewall]",
+                        "recipe[hollandbackup]",
+                        "recipe[hollandbackup::mysqldump]",
+                        "recipe[hollandbackup::main]",
+                        "recipe[hollandbackup::backupsets]",
+                        "recipe[hollandbackup::cron]"
+                    ],
+                    "rax": {
+                        "firewall": {
+                            "tcp": [
+                                22
+                            ]
+                        },
+                        "mysql": {
+                            "innodb_buffer_pool_mempercent": 0.6
+                        }
+                    }
+                },
+                "private_key": {
+                    "get_attr": [
+                        "ssh_key",
+                        "private_key"
+                    ]
+                },
+                "kitchen": {
+                    "get_param": "kitchen"
+                },
+                "host": {
+                    "get_attr": [
+                        "database_server",
+                        "accessIPv4"
+                    ]
+                },
+                "chef_version": {
+                    "get_param": "chef_version"
+                }
+            }
+        },
+        "master_mem_check": {
+            "type": "Rackspace::CloudMonitoring::Check",
+            "properties": {
+                "metadata": {
+                    "rax-heat": {
+                        "get_param": "OS::stack_id"
+                    },
+                    "stack-name": {
+                        "get_param": "OS::stack_name"
+                    }
+                },
+                "details": {},
+                "timeout": 10,
+                "entity": {
+                    "get_resource": "wp_master_server"
+                },
+                "type": "agent.memory",
+                "period": 30,
+                "label": "master_mem_check"
+            }
+        },
+        "agent_token": {
+            "type": "Rackspace::CloudMonitoring::AgentToken",
+            "properties": {
+                "label": {
+                    "get_param": "OS::stack_name"
+                }
             }
         }
     }
