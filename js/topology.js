@@ -14,51 +14,83 @@
 
 HotUI.TopologyNode = {};
 
-HotUI.TopologyNode.factory = function (resource, properties) {
-    var self = this,
-        type = resource.getType().toLowerCase(),
+HotUI.TopologyNode.factory = function (resource /*, args... */) {
+    var type = resource.getType().toLowerCase(),
         types = {
             autoscale: this.AutoScale,
+            chefsolo: this.ChefSolo,
             loadbalancer: this.LoadBalancer,
             volume: this.Database,
             container: this.Database,
             trove: this.Database,
             key: this.Key,
+            randomstring: this.RandomString,
             dns: this.DNS,
             network: this.Network,
             server: this.Server,
             'ec2::instance': this.Server
-        };
+        },
+        myType = getType(Object.keys(types), 0);
 
-    function getInstance(patterns, index) {
-        if (index === patterns.length) {
-            return self.Helper.create(resource, properties);
-        } else if (type.indexOf(patterns[index]) > -1) {
-            return types[patterns[index]].create(resource, properties);
-        } else {
-            return getInstance(patterns, index + 1);
-        }
+    function getType(patterns, index) {
+        return index === patterns.length
+            ? HotUI.TopologyNode.Helper
+            : type.indexOf(patterns[index]) > -1
+                ? types[patterns[index]]
+                : getType(patterns, index + 1);
     }
 
-    return getInstance(Object.keys(types), 0);
+    return myType.create.apply(myType, arguments);
 };
 
 HotUI.TopologyNode.Base = BaseObject.extend({
-    create: function (resource, properties) {
+    create: function (resource, resumeFunc, clickCB, properties) {
         if (!properties) {
             properties = {};
         }
-
-        properties.data = resource;
+        properties._resumeFunc = resumeFunc;
+        properties._clickCB = clickCB;
+        properties.resource = resource;
         properties.svg = {};
-
-        return this.extend(properties);
+        return Barricade.Observable.call(this.extend(properties));
     },
     _iconBaseURL: '/static/hotui/img/',
+    _h: 110,
+    _w: 80,
+    h: function () { return this._h * this.scale; },
+    w: function () { return this._w * this.scale; },
+    scale: 1,
+    _padding: 10,
+    padding: function () { return this._padding * this.scale; },
     focus: {x: 0, y: 0},
     focusForce: {x: 0.5, y: 0.5},
     getIconURL: function () {
         return this._iconBaseURL + this.iconFile;
+    },
+    canConnectTo: function (d) {
+        return this.resource.canConnectTo(d.resource);
+    },
+    containsPoint: function (p) {
+        return Math.abs(p.x - this.x) < this.w() / 2 &&
+               Math.abs(p.y - this.y) < this.h() / 2;
+    },
+    setNameOnElement: function ($el) {
+        var name = this.resource.getID(),
+            i = Math.floor(name.length / 2);
+
+        $el.textContent = name;
+
+        while ($el.getComputedTextLength() > this._w - 5) {
+            $el.textContent = name.slice(0, i) + '...' + name.slice(-i);
+            i--;
+        }
+    },
+    setFixed: function (isFixed) {
+        this.fixed = this._fixed = isFixed;
+        this.svg.node.classed('hb_fixed', this.fixed);
+        if(!isFixed) {
+            this._resumeFunc();
+        }
     },
     iconFile: 'icon-orchestration.svg',
     setNode: function ($g) {
@@ -66,145 +98,208 @@ HotUI.TopologyNode.Base = BaseObject.extend({
         this.decorateNode();
     },
     decorateNode: function () {
-        var self = this,
-            $g = this.svg.node,
-            $label,
-            $textContainer,
-            $linkCreator,
-            $linkCreatorLine,
-            dragLinkCreator;
-
-        dragLinkCreator = d3.behavior.drag()
+        this.svg.node.attr({
+            'class': 'node',
+            cx: function (d) { return d.x; },
+            cy: function (d) { return d.y; }
+        });
+        this._addEvents(this.svg.node);
+        this._appendBackground(this.svg.node);
+        this._appendResourceImage(this.svg.node);
+        this._appendTextContainer(this.svg.node);
+        this._appendButtonContainer(this.svg.node);
+        this.updateNode();
+    },
+    _getMousePos: function () {
+        return d3.mouse(this.svg.node[0][0].parentNode);
+    },
+    _getLinkCreatorDrag: function ($g, $linkButton, $linkCreatorLine) {
+        return d3.behavior.drag()
             .on('dragstart', function () {
+                $g.classed('hb_linking', true);
                 d3.event.sourceEvent.stopPropagation();
-            })
-            .on('drag', function () {
-                $linkCreator.attr('cx', d3.event.x)
-                            .attr('cy', d3.event.y);
-                $linkCreatorLine.attr('x2', d3.event.x)
-                                .attr('y2', d3.event.y);
-            })
+                this.emit('linkCreateDragStart', this);
+            }.bind(this))
+            .on('drag', function (d) {
+                var pos = d3.mouse($linkButton[0][0]),
+                    gPos = this._getMousePos();
+                $linkCreatorLine.attr({x2: pos[0], y2: pos[1]});
+                this.emit('linkCreateDrag', {x: gPos[0], y: gPos[1]});
+            }.bind(this))
             .on('dragend', function (d) {
-                var creatorX = +$linkCreator.attr('cx'),
-                    creatorY = +$linkCreator.attr('cy');
+                var pos = this._getMousePos();
+                $g.classed('hb_linking', false);
+                $linkCreatorLine.attr({x2: 7.5, y2: 7.5});
+                this.emit('linkCreateDragEnd', pos[0], pos[1], this);
+            }.bind(this));
+    },
+    _addEvents: function ($g) {
+        $g.on('dblclick', function () {
+            this.setFixed(false);
+            d3.event.stopPropagation();
+        }.bind(this))
+        .on('mousedown', function () {
+            d3.event.stopPropagation();
+        })
+        .on('click', function () {
+            if (!d3.event.defaultPrevented) {
+                this._clickCB(this.resource);
+            }
+        }.bind(this))
+        .on('mouseenter', function () {
+            this.parentNode.appendChild(this); // Brings node to front
+        });
+    },
+    _appendBackground: function ($g) {
+        $g.append('rect').attr({
+            'class': 'hb_bg',
+            height: this._h,
+            rx: '5',
+            width: this._w,
+            x: -this._w / 2,
+            y: -this._h / 2
+        });
+    },
+    _appendResourceImage: function ($g) {
+        var resImgPad = 15,
+            resImgWidth = this._w - resImgPad * 2;
 
-                $linkCreator.attr('cx', '7')
-                            .attr('cy', '10');
-                $linkCreatorLine.attr('x2', '0')
-                                .attr('y2', '0');
-                self._onLinkCreatorDrop(creatorX + d.x,
-                                        creatorY + d.y,
-                                        self);
+        $g.append('image').attr({
+            'class': 'resource_image',
+            height: resImgWidth,
+            width: resImgWidth,
+            x: -resImgWidth / 2,
+            y: -this._h/2 + 25,
+            'xlink:href': this.getIconURL()
+        });
+    },
+    _appendTextContainer: function ($g) {
+        var $textContainer = $g.append('g').attr('class', 'text_container');
+        this._appendResourceName($textContainer);
+        this._appendResourceType($textContainer);
+    },
+    _appendResourceName: function ($textContainer) {
+        $textContainer.append('text').attr({
+            'class': 'resource_name',
+            'text-anchor': 'middle',
+            x: 0,
+            y: 35
+        });
+    },
+    _appendResourceType: function ($textContainer) {
+        $textContainer.append('text').attr({
+            'class': 'resource_type',
+            'text-anchor': 'middle',
+            x: 0,
+            y: 45
+        });
+    },
+    _appendButtonContainer: function ($g) {
+        var $buttonContainer = $g.append('g').attr({
+                'class': 'hb_node_buttons',
+                transform: Snippy('translate(${x}, ${y})')({
+                        x: this._w / 2 - 5,
+                        y: -this._h / 2 + 5
+                    })
             });
 
-        $linkCreatorLine = $g.append('line')
-            .attr('x1', '0')
-            .attr('y1', '0')
-            .attr('x2', '0')
-            .attr('y2', '0')
-            .attr('stroke-width', '1px')
-            .attr('stroke', 'grey');
+        this._appendLinkButton($g, $buttonContainer);
+        this._appendPinButton($buttonContainer);
 
-        $linkCreator = $g.append('circle')
-            .attr('r', '5')
-            .attr('cx', '7')
-            .attr('cy', '10')
-            .attr('fill', 'white')
-            .attr('stroke', '#3480C2')
-            .on('mouseenter', function () {
-                $linkCreator.attr('fill', '#3480C2');
-            })
-            .on('mouseleave', function () {
-                $linkCreator.attr('fill', 'white');
-            })
-            .call(dragLinkCreator);
+    },
+    _appendLinkButton: function ($g, $buttonContainer) {
+        var $linkButton,
+            $linkCreatorLine;
 
-        $label = $g.append('g')
-                   .attr('class', 'label')
-                   .attr('transform', 'translate(16, 0)');
+        $linkButton = $buttonContainer.append('g')
+            .attr({
+                'class': 'hb_link',
+                transform: 'translate(-34, 0)'
+            }).html(
+                "<rect width='15' height='15' x='0' y='0' rx='3' />" +
+                "<svg xmlns='http://www.w3.org/2000/svg' " +
+                        "class='hb_link_icon' " +
+                        "width='15' height='15' viewBox='0 0 100 100'>" +
+                    "<g transform='translate(78, 0)rotate(60)'>" +
+                        "<rect width='31' height='55' x='6' y='11' rx='15' />" +
+                        "<rect width='31' height='55'" +
+                              "x='20' y='34' rx='15' />" +
+                    "</g>" +
+                "</svg>"
+            )
+            .on('click', function () { d3.event.stopPropagation(); });
 
-        $textContainer = $label.append('g')
-                               .attr('class', 'text_container');
+        $linkCreatorLine = $linkButton.append('line').attr({x1: 7.5, y1: 7.5});
 
-        $g.append('circle')
-            .attr('r', '14')
-            .attr('cx', '0')
-            .attr('cy', '0')
-            .attr('fill', 'white')
-            .attr('stroke', '#3480C2')
-            .attr('stroke-width', '1');
-
-        $g.append('image')
-            .attr('class', 'resource_image')
-            .attr('height', '20')
-            .attr('width', '20')
-            .attr('x', '-10')
-            .attr('y', '-10')
-            .attr('xlink:href', this.getIconURL());
-
-        $label.insert('rect', '.text_container')
-              .attr('class', 'background')
-              .attr('rx', 5)
-              .attr('ry', 5);
-
-        $textContainer.append('text')
-                       .attr('class', 'resource_name')
-                       .attr('x', 0)
-                       .attr('y', -2);
-
-        $textContainer.append('text')
-                       .attr('class', 'resource_type')
-                       .attr('x', 0)
-                       .attr('y', 5);
-
-        this.updateNode();
+        $linkButton.call(
+            this._getLinkCreatorDrag($g, $linkButton, $linkCreatorLine));
+    },
+    _appendPinButton: function ($buttonContainer) {
+        $buttonContainer.append('g')
+            .attr({
+                'class': 'hb_pin',
+                transform: 'translate(-15, 0)',
+            }).on('click', function () {
+                this.setFixed(!this._fixed);
+                d3.event.stopPropagation();
+            }.bind(this)).html(
+                "<rect width='15' height='15' x='0' y='0' rx='3' />" +
+                "<svg xmlns='http://www.w3.org/2000/svg' class='hb_pin_icon' " +
+                        "width='15' height='15' viewBox='0 0 100 100'>" +
+                    "<rect width='26' height='45' x='37' y='15' />" +
+                    "<path d='M 25 60 H 75 M 50 60 V 90 M 57 15 V 60'/>" +
+                "</svg>");
     },
     updateNode: function () {
         var $g = this.svg.node,
             pad = 5,
             $label = $g.selectAll('.label'),
-            $labelBg = $label.selectAll('.background'),
             $textContainer = $label.selectAll('.text_container');
 
-        $g.selectAll(".resource_name")
-            .text(this.data.getID());
+        this.setNameOnElement($g.selectAll('.resource_name')[0][0]);
+        this.setFixed(this._fixed);
 
-        $g.selectAll(".resource_type")
-            .text(this.data.getType().split("::")[2]);
-
-        window.setTimeout(function () {
-            var textBBox = $textContainer[0][0].getBBox();
-            $labelBg.attr('x', textBBox.x - pad)
-                     .attr('y', textBBox.y - pad)
-                     .attr('width', textBBox.width + 2 * pad)
-                     .attr('height', textBBox.height + 2 * pad);
-        }, 0);
+        $g.selectAll('.resource_type')
+            .text(this.resource.getShortType());
     },
-    setOnLinkCreatorDrop: function (callback) {
-        this._onLinkCreatorDrop = callback;
-    },
-    _onLinkCreatorDrop: function () { }
+    updatePos: function () {
+        this.svg.node.attr(
+            'transform', Snippy('translate(${x},${y})scale(${s})')({
+                x: this.x.toFixed(10),
+                y: this.y.toFixed(10),
+                s: this.scale
+            }));
+    }
 });
 
 // Represents a main infrastructure component
 HotUI.TopologyNode.Core = HotUI.TopologyNode.Base.extend({
-    charge: -400,
-    focusForce: {x: 0.05, y: 0.35}
+    charge: -800,
+    fixToAxis: 'x',
+    focusForce: {x: 0.05, y: 1}
 });
 
 HotUI.TopologyNode.Helper = HotUI.TopologyNode.Base.extend({
     charge: -200,
+    fixToAxis: 'y',
     focus: {x: -300, y: 0},
     focusForce: {x: 0.05, y: 0.01}
 });
 
+HotUI.TopologyNode.Follower = HotUI.TopologyNode.Base.extend({
+    charge: -100,
+    scale: 0.5,
+    focus: {x: 0, y: 0},
+    focusForce: {x: 0, y: 0}
+});
+
 HotUI.TopologyNode.DNS = HotUI.TopologyNode.Core.extend({
-    focus: {x: 0, y: -140},
+    focus: {x: 0, y: -300},
     iconFile: 'icon-dns.svg'
 });
 
 HotUI.TopologyNode.LoadBalancer = HotUI.TopologyNode.Core.extend({
-    focus: {x: 0, y: -70},
+    focus: {x: 0, y: -150},
     iconFile: 'icon-load-balancers.svg'
 });
 
@@ -214,8 +309,12 @@ HotUI.TopologyNode.Server = HotUI.TopologyNode.Core.extend({
 });
 
 HotUI.TopologyNode.Database = HotUI.TopologyNode.Core.extend({
-    focus: {x: 0, y: 70},
+    focus: {x: 0, y: 150},
     iconFile: 'icon-block-storage.svg'
+});
+
+HotUI.TopologyNode.ChefSolo = HotUI.TopologyNode.Helper.extend({
+    iconFile: 'chef.svg'
 });
 
 HotUI.TopologyNode.AutoScale = HotUI.TopologyNode.Helper.extend({
@@ -226,56 +325,54 @@ HotUI.TopologyNode.Network = HotUI.TopologyNode.Helper.extend({
     iconFile: 'icon-networks.svg'
 });
 
-HotUI.TopologyNode.Key = HotUI.TopologyNode.Helper.extend({
+HotUI.TopologyNode.Key = HotUI.TopologyNode.Follower.extend({
     iconFile: 'icon-private-cloud.svg'
+});
+
+HotUI.TopologyNode.RandomString = HotUI.TopologyNode.Follower.extend({
+    iconFile: 'icon-random-string.svg'
 });
 
 HotUI.Topology = BaseObject.extend({
     create: function ($container) {
         var self = this.extend({
-                _width: $container.width(),
-                _height: $container.height(),
                 _onResourceClickCallback: function () {},
                 _nodes: []
-            }),
-            centerX = 3 * self._width / 4,
-            centerY = self._height / 2,
-            zoom = d3.behavior.zoom()
-                              .translate([centerX, centerY])
-                              .on("zoom", function () { self._onZoom(); });
+            });
 
-        self._svg = d3.select($container[0]).append("svg")
-                .attr("width", self._width)
-                .attr("height", self._height)
-                .call(zoom);
+        self._zoom = d3.behavior.zoom()
+             .scaleExtent([0.3, 5])
+             .on('zoom', function () {
+                 self._onZoom(d3.event.translate, d3.event.scale, $container);
+             });
 
-        self._topG = self._svg.append("g")
-                         .attr('transform', 'translate(' + centerX + ',' +
-                                                           centerY + ')');
+        self._svg = d3.select($container[0]).append('svg')
+                                            .call(self._zoom);
+        self._topG = self._svg.append('g');
 
         self._force = d3.layout.force()
-                               .size([self._width, self._height])
-                               .on("tick", function (e) { self._tick(e); })
+                               .on('tick', function (e) { self._tick(e); })
                                .start();
 
-        self._node = self._topG.selectAll(".node");
-        self._link = self._topG.selectAll(".link");
+        self._force.drag().on('drag', function (d) { d.setFixed(true); });
+
+        self._node = self._topG.selectAll('.node');
+        self._link = self._topG.selectAll('.link');
         self._updatedResourceCB = function () { self.updatedResource(); };
 
-        self._topG.append('circle')
-             .attr('r', '1')
-             .attr('fill', '#808080')
-             .attr('cx', '0')
-             .attr('cy', '0');
-
         self.setTieredLayout();
+        self._updateSize($container.width(), $container.height());
+        self._onZoom([self._width / 2, self._height / 2], 1, $container);
 
-        $(window).unload(function () {
+        d3.select(window).on('resize', function () {
+            self._updateSize($container.width(), $container.height());
+        }).on('unload', function () {
             var positions = {};
             self._nodes.forEach(function (n) {
-                positions[n.data.getID()] = {
+                positions[n.resource.getID()] = {
                     x: n.x,
-                    y: n.y
+                    y: n.y,
+                    _fixed: n._fixed
                 };
             });
 
@@ -284,6 +381,13 @@ HotUI.Topology = BaseObject.extend({
         });
 
         return self;
+    },
+    _updateSize: function (width, height) {
+        this._width = width;
+        this._height = height;
+        this._svg.attr({width: width, height: height});
+        this._force.size([width, height]);
+        return this;
     },
     setWebLayout: function () {
         this._force.gravity(0.1)
@@ -300,20 +404,23 @@ HotUI.Topology = BaseObject.extend({
                  return d.charge;
              })
              .linkDistance(function (d) {
-                 if (d.source.instanceof(HotUI.TopologyNode.Core) &&
+                 if (d.source.instanceof(HotUI.TopologyNode.Follower) ||
+                         d.target.instanceof(HotUI.TopologyNode.Follower)) {
+                     return 25;
+                 } else if (d.source.instanceof(HotUI.TopologyNode.Core) &&
                          d.target.instanceof(HotUI.TopologyNode.Core)) {
-                     return 70;
+                     return 200;
                  } else if (d.source.instanceof(HotUI.TopologyNode.Helper) &&
                          d.target.instanceof(HotUI.TopologyNode.Helper)) {
-                     return 70;
-                 } else {
                      return 200;
+                 } else {
+                     return 300;
                  }
              })
              .linkStrength(function (d) {
                  return d.source.instanceof(HotUI.TopologyNode.Core) &&
                         d.target.instanceof(HotUI.TopologyNode.Core) ?
-                            0.5 :
+                            0.001 :
                         d.source.instanceof(HotUI.TopologyNode.Helper) &&
                         d.target.instanceof(HotUI.TopologyNode.Helper) ?
                             0.5 :
@@ -325,32 +432,28 @@ HotUI.Topology = BaseObject.extend({
     },
     _decorateNodes: function (nodesIn) {
         var self = this,
-            newG = nodesIn.append("g")
-                .attr("class", "node")
-                .attr("cx", function (d) { return d.x; })
-                .attr("cy", function (d) { return d.y; })
-                .call(this._force.drag)
-                .on("mousedown", function () {
-                    d3.event.stopPropagation();
-                })
-                .on("click", function (d) {
-                    if (!d3.event.defaultPrevented) {
-                        self._onResourceClickCallback(d.data);
-                    }
-                })
-                .on("mouseenter", function () {
-                    this.parentNode.appendChild(this);
-                });
+            newG = nodesIn.append('g')
+                .call(this._force.drag);
 
         newG.each(function (d) {
             d.setNode(d3.select(this));
-            d.setOnLinkCreatorDrop(function (x, y, srcNode) {
+            d.on('linkCreateDragStart', function (srcNode) {
+                self._node.classed('hb_can_connect_to_good', function (n) {
+                    return n !== d && d.canConnectTo(n);
+                });
+            }).on('linkCreateDrag', function (p) {
+                self._node.classed('hb_can_connect_to_hover', function (n) {
+                    return n !== d && n.containsPoint(p);
+                });
+            }).on('linkCreateDragEnd', function (x, y, srcNode) {
+                self._node.classed(
+                    'hb_can_connect_to_good hb_can_connect_to_hover', false);
                 self._onLinkCreatorDrop(x, y, srcNode);
             });
         });
     },
     _updateNodes: function (nodesIn) {
-        d3.selection(nodesIn).selectAll("g.node").each(function (d) {
+        d3.selection(nodesIn).selectAll('g.node').each(function (d) {
             d.updateNode();
         });
     },
@@ -360,18 +463,74 @@ HotUI.Topology = BaseObject.extend({
             linksLine = linksG.append('polyline'),
             linksArrow = linksG.append('path');
 
-        linksG.attr("class", function (d) {
-            return "link " + d.type;
+        linksG.attr('class', function (d) {
+            return 'link ' + d.type;
         });
 
         linksArrow.attr('d', 'M3,0 L-3,-2 L-3,2 Z');
     },
-    _onZoom: function () {
-        this._topG.attr("transform", "translate(" + d3.event.translate + ")" +
-                        "scale(" + d3.event.scale + ")");
+    _onZoom: function (translate, scale, $container) {
+        this._topG.attr('transform', Snippy(
+            'translate(${0})scale(${1})')([translate, scale]));
 
-        // updates label backgrounds because text changes size
-        this._nodes.forEach(function (n) { n.updateNode(); });
+        this._zoom.translate(translate)
+                  .scale(scale);
+
+        $container.css({
+            backgroundSize: 50 * scale,
+            backgroundPosition: Snippy('${0}px ${1}px')(translate)
+        });
+    },
+    _collide: function (nodes, alpha) {
+        var quadtree = d3.geom.quadtree(nodes),
+            maxH = Math.max.apply(null, nodes.map(function (d) {
+                return d.h();
+            })),
+            maxW = Math.max.apply(null, nodes.map(function (d) {
+                return d.w();
+            })),
+            maxPadding = Math.max.apply(null, nodes.map(function (d) {
+                return d.padding();
+            }));
+
+        return function (d) {
+            var xMin = (d.w() + maxW) / 2 + maxPadding,
+                yMin = (d.h() + maxH) / 2 + maxPadding,
+                nx1 = d.x - xMin,
+                nx2 = d.x + xMin,
+                ny1 = d.y - yMin,
+                ny2 = d.y + yMin;
+
+            quadtree.visit(function (quad, x1, y1, x2, y2) {
+                if (quad.point && quad.point !== d) {
+                    var pad = Math.max(d.padding(), quad.point.padding()),
+                        xDelta = d.x - quad.point.x,
+                        yDelta = d.y - quad.point.y,
+                        xDist = Math.abs(xDelta),
+                        yDist = Math.abs(yDelta),
+                        xMin = (d.w() + quad.point.w()) / 2 + pad,
+                        yMin = (d.h() + quad.point.h()) / 2 + pad,
+                        xOverlapRatio,
+                        yOverlapRatio;
+
+                    if (xDist < xMin && yDist < yMin) { // Collision detected
+                        xOverlapRatio = (xMin - xDist) / xDist;
+                        yOverlapRatio = (yMin - yDist) / yDist;
+
+                        if (xOverlapRatio < yOverlapRatio) {
+                            xDelta *= xOverlapRatio * alpha;
+                            d.x += xDelta;
+                            quad.point.x -= xDelta;
+                        } else {
+                            yDelta *= yOverlapRatio * alpha;
+                            d.y += yDelta;
+                            quad.point.y -= yDelta;
+                        }
+                    }
+                }
+                return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+            });
+        };
     },
     _tick: function (e) {
         this._layoutSpecificTick(e);
@@ -382,13 +541,15 @@ HotUI.Topology = BaseObject.extend({
             return angle * (180 / Math.PI);
         }
 
-        this._node.attr("transform", function (d) {
-            return "translate(" + d.x + ", " + d.y + ")";
+        this._node.each(function (d) {
+            d.updatePos();
         });
 
         this._link.attr('transform', function (d) {
-            return 'translate(' + (d.source.x + d.target.x) / 2 + ', ' +
-                (d.source.y + d.target.y) / 2 + ')';
+            return Snippy('translate(${0}, ${1})')([
+                (d.source.x + d.target.x) / 2,
+                (d.source.y + d.target.y) / 2
+            ]);
         });
 
         this._link.selectAll('polyline')
@@ -403,35 +564,40 @@ HotUI.Topology = BaseObject.extend({
             });
 
         this._link.selectAll('path').attr('transform', function (d) {
-            return 'rotate(' + toDegrees(Math.atan2(d.target.y - d.source.y,
-                                             d.target.x - d.source.x)) + ')';
+            return Snippy('rotate(${0})')([toDegrees(Math.atan2(
+                d.target.y - d.source.y, d.target.x - d.source.x))]);
         });
     },
     _tieredTick: function (e) {
-        this._nodes.forEach(function (d) {
-            // light gravity towards x = 0
+        var freeNodes = this._nodes.filter(function (d) { return !d.fixed; });
+
+        freeNodes.forEach(function (d) {
             d.x += (d.focus.x - d.x) * e.alpha * d.focusForce.x;
             d.y += (d.focus.y - d.y) * e.alpha * d.focusForce.y;
         });
+
+        freeNodes.forEach(function (d) {
+            var scale = 1 - Math.min(1, e.alpha * 10),
+                coord;
+
+            if ('fixToAxis' in d) {
+                coord = d.fixToAxis === 'x' ? 'y' : 'x';
+                d[coord] += (d.focus[coord] - d[coord]) * scale * scale * scale;
+            }
+        });
+
+        freeNodes.forEach(this._collide(freeNodes, 0.5));
     },
     _webTick: function () {},
     _onLinkCreatorDrop: function (x, y, srcNode) {
-        var self = this;
-
         this._nodes.forEach(function (n) {
-            var dist = Math.sqrt((x - n.x) * (x - n.x) +
-                                 (y - n.y) * (y - n.y));
-
-            if (dist <= 15 && n !== srcNode) {
-                self._onLinkCreatorCreate(srcNode.data, n.data);
+            if (n !== srcNode && n.containsPoint({x: x, y: y})) {
+                this._onLinkCreatorCreate(srcNode.resource, n.resource);
             }
-        });
+        }.bind(this));
     },
     aboutToAddResource: function (posX, posY) {
-        this._nextResourcePt = {
-            x: posX,
-            y: posY
-        };
+        this._nextResourcePt = {x: posX, y: posY};
     },
     updatedResource: function () {
         this._updateNodesArray();
@@ -439,8 +605,8 @@ HotUI.Topology = BaseObject.extend({
         this._update();
     },
     documentToSVGCoords: function (docX, docY) {
-        var pt = this._svg.node().createSVGPoint();
-        var ctm = this._topG.node().getScreenCTM();
+        var pt = this._svg.node().createSVGPoint(),
+            ctm = this._topG.node().getScreenCTM();
 
         pt.x = docX;
         pt.y = docY;
@@ -451,10 +617,7 @@ HotUI.Topology = BaseObject.extend({
             pt = pt.matrixTransform(ctm);
         }
 
-        return {
-            x: pt.x,
-            y: pt.y
-        };
+        return {x: pt.x, y: pt.y};
     },
     setOnResourceClick: function (onClickCallback) {
         this._onResourceClickCallback = onClickCallback;
@@ -464,7 +627,6 @@ HotUI.Topology = BaseObject.extend({
         this._onLinkCreatorCreate = callback;
     },
     setData: function (resourcesIn) {
-
         if (this._resources) {
             this._resources.off('change', this._updatedResourceCB);
             this._resources.off('childChange', this._updatedResourceCB);
@@ -476,61 +638,61 @@ HotUI.Topology = BaseObject.extend({
         this._resources.on('childChange', this._updatedResourceCB);
 
         this._updateNodesArray();
-
         this._force.nodes(this._nodes);
         this._update();
     },
     _getNodeMap: function () {
         return this._nodes.reduce(function (mapOut, curNode) {
-                mapOut[curNode.data.getID()] = curNode;
+                mapOut[curNode.resource.getID()] = curNode;
                 return mapOut;
             }, {});
     },
     _updateNodesArray: function () {
-        var self = this,
-            nodeMap = this._getNodeMap(),
+        var nodeMap = this._getNodeMap(),
             positions = this._getSavedPositions(),
+            resumeFunc = this._force.resume.bind(this._force),
+            clickCB = function (res) {
+                this._onResourceClickCallback(res);
+            }.bind(this),
             droppedNode;
 
         this._nodes = this._resources.toArray().map(function (resource) {
-            var oldNode = nodeMap[resource.getID()],
-                newNode;
+            var oldNode = nodeMap[resource.getID()];
+
+            function createNode(props) {
+                return HotUI.TopologyNode.factory(resource, resumeFunc,
+                                                  clickCB, props);
+            }
 
             if (oldNode) {
-                oldNode.data = resource;
+                oldNode.resource = resource;
                 return oldNode;
-            } else if (self._nextResourcePt) {
-                newNode = HotUI.TopologyNode.factory(resource, {
-                    x: self._nextResourcePt.x,
-                    y: self._nextResourcePt.y
+            } else if (this._nextResourcePt) {
+                droppedNode = createNode({
+                    x: this._nextResourcePt.x,
+                    y: this._nextResourcePt.y
                 });
 
-                self._nextResourcePt = null;
-                droppedNode = newNode;
-                return newNode;
+                this._nextResourcePt = null;
+                return droppedNode;
             } else if (positions.hasOwnProperty(resource.getID())) {
-                return HotUI.TopologyNode.factory(resource, {
+                return createNode({
                     x: positions[resource.getID()].x,
-                    y: positions[resource.getID()].y
+                    y: positions[resource.getID()].y,
+                    _fixed: positions[resource.getID()]._fixed
                 });
             } else {
-                return HotUI.TopologyNode.factory(resource, {
-                    x: (Math.random() - 0.5) * self._width,
-                    y: (Math.random() - 0.5) * self._height,
+                return createNode({
+                    x: (Math.random() - 0.5) * this._width,
+                    y: (Math.random() - 0.5) * this._height,
                 });
             }
-        });
+        }, this);
 
         if (droppedNode) {
             this._nodes.forEach(function (node) {
-                var dx, dy;
-                if (node !== droppedNode) {
-                    dx = droppedNode.x - node.x;
-                    dy = droppedNode.y - node.y;
-
-                    if (dx * dx + dy * dy < 225) { // Within 15px (sqrt 225)
-                        node.data.connectTo(droppedNode.data);
-                    }
+                if (node !== droppedNode && droppedNode.containsPoint(node)) {
+                    node.resource.connectTo(droppedNode.resource);
                 }
             });
         }
@@ -539,7 +701,7 @@ HotUI.Topology = BaseObject.extend({
         var i;
 
         for (i = 0; i < this._nodes.length; i++) {
-            if (this._nodes[i].data === resource) {
+            if (this._nodes[i].resource === resource) {
                 return this._nodes[i];
             }
         }
@@ -557,40 +719,40 @@ HotUI.Topology = BaseObject.extend({
                         'type': type
                     });
                 } else {
-                    console.error("else statement hit when adding links");
+                    console.error('else statement hit when adding links');
                 }
             }
         }
 
         function addDependsOnLinks(nodeIn) {
-            nodeIn.data.get('depends_on').each(function (i, resourceID) {
+            nodeIn.resource.get('depends_on').each(function (i, resourceID) {
                 var target = self._resources.getByID(resourceID.get());
 
                 if (target) {
-                    addLink(nodeIn, target, "depends_on");
+                    addLink(nodeIn, target, 'depends_on');
                 }
             });
         }
 
         function addAttributeLinks(nodeIn) {
-            nodeIn.data.getIntrinsicFunctions()
+            nodeIn.resource.getIntrinsicFunctions()
                   .filter(function (intrinsic) {
                       return intrinsic.instanceof(HotUI.HOT.GetAttribute);
                   })
                   .forEach(function (value) {
                       addLink(nodeIn, value.get('get_attr').get('resource'),
-                              "attribute");
+                              'attribute');
                   });
         }
 
         function addResourceLinks(nodeIn) {
-            nodeIn.data.getIntrinsicFunctions()
+            nodeIn.resource.getIntrinsicFunctions()
                   .filter(function (intrinsic) {
                       return intrinsic.instanceof(HotUI.HOT.GetResource);
                   })
                   .forEach(function (value) {
                       addLink(nodeIn, value.get('get_resource'),
-                              "resource");
+                              'resource');
                   });
         }
 
@@ -610,8 +772,9 @@ HotUI.Topology = BaseObject.extend({
         return positions;
     },
     _updateNodeData: function () {
-        this._node = this._node.data(this._nodes,
-                                     function (d) { return d.data.getID(); });
+        this._node = this._node.data(this._nodes, function (d) {
+            return d.resource.getID();
+        });
     },
     _update: function () {
         this._updateNodeData();

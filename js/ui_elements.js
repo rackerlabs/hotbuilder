@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-$(function () {
-    HotUI.FormControl = function (data, parameters) {
+HotUI.UI = (function (hot) {
+    var ui = {};
+
+    ui.FormControl = function (data, parameters) {
         if (typeof parameters === 'undefined') {
             parameters = {
                 nestingLevel: 1,
@@ -25,20 +27,20 @@ $(function () {
             parameters.template = null;
         }
 
-        if (data.instanceof(HotUI.HOT.ResourcePropertyWrapper)) {
-            return HotUI.ResourcePropertyControl.create(data, parameters);
-        } else if (data.instanceof(HotUI.HOT.IntrinsicFunction)) {
-            return HotUI.IntrinsicFunctionControl.create(data, parameters);
-        } else if (data.instanceof(HotUI.HOT.ParameterConstraint)) {
-            return HotUI.ParameterConstraintControl.create(data, parameters);
-        } else if (data.instanceof(HotUI.HOT.Primitive)) {
-            return HotUI.PrimitiveSelectorControl.create(data, parameters);
+        if (data.instanceof(hot.ResourcePropertyWrapper)) {
+            return ui.ResourceProperty.create(data, parameters);
+        } else if (data.instanceof(hot.IntrinsicFunction)) {
+            return ui.IntrinsicFunction.create(data, parameters);
+        } else if (data.instanceof(hot.ParameterConstraint)) {
+            return ui.ParameterConstraint.create(data, parameters);
+        } else if (data.instanceof(hot.Primitive)) {
+            return ui.PrimitiveSelector.create(data, parameters);
         } else {
-            return HotUI.NormalFormControl(data, parameters);
+            return ui.NormalFormControl(data, parameters);
         }
     };
 
-    HotUI.NormalFormControl = function (data, parameters) {
+    ui.NormalFormControl = function (data, parameters) {
         var type = data.getPrimitiveType();
 
         if (typeof parameters === 'undefined') {
@@ -54,45 +56,63 @@ $(function () {
 
         if (data.instanceof(Barricade.Container)) {
             if (data.instanceof(Barricade.Array)) {
-                return HotUI.ArrayControl.create(data, parameters);
+                return ui.Array.create(data, parameters);
 
             } else if (data.instanceof(Barricade.MutableObject)) {
-                return HotUI.MutableObjectControl.create(data, parameters);
+                return ui.MutableObject.create(data, parameters);
 
             } else if (data.instanceof(Barricade.ImmutableObject)) {
-                return HotUI.ImmutableObjectControl.create(data, parameters);
+                return ui.ImmutableObject.create(data, parameters);
             }
         } else {
             if (type === String) {
-                return HotUI.StringControl.create(data);
+                return ui.String.create(data);
             } else if (type === Boolean) {
-                return HotUI.BooleanControl.create(data);
+                return ui.Boolean.create(data);
             } else if (type === Array || type === Object) {
-                return HotUI.SchemalessContainerControl.create(data);
+                return ui.SchemalessContainer.create(data);
             } else if (type === Number) {
-                return HotUI.NumberControl.create(data);
+                return ui.Number.create(data);
             }
         }
 
         throw new Error('no suitable control found');
     };
 
-    HotUI.BaseControl = BaseObject.extend({
+    ui.Base = BaseObject.extend({
         create: function () {
-            return this.extend({});
+            return this.extend({
+                    _childControllers: []
+                });
+        },
+        addChildController: function (c) {
+            return this._childControllers.push(c) - 1;
         },
         _finishHTML: function () { },
-        html: function () {
-            var $domElement = this._doHTML();
-            ko.applyBindings(this, $domElement[0]);
+        html: function (parentController) {
+            var $domElement = this._doHTML(),
+                controllerNum;
+
             this._finishHTML();
-            return $domElement;
+
+            if (parentController) {
+                controllerNum = parentController.addChildController(this);
+                return [
+                    Snippy('<!-- ko with: _childControllers[${0}] -->')([
+                        controllerNum]),
+                    $domElement,
+                    '<!-- /ko -->'
+                ];
+            } else {
+                ko.applyBindings(this, $domElement[0]);
+                return $domElement;
+            }
         }
     });
 
-    HotUI.Snippet = HotUI.BaseControl.extend({
+    ui.Snippet = ui.Base.extend({
         create: function (htmlSnippet, observers) {
-            var self = HotUI.BaseControl.create.call(this);
+            var self = ui.Base.create.call(this);
             self._snippet = htmlSnippet;
             Object.keys(observers).forEach(function (key) {
                 self[key] = observers[key];
@@ -104,9 +124,9 @@ $(function () {
         }
     });
 
-    HotUI.Selector = HotUI.BaseControl.extend({
+    ui.Selector = ui.Base.extend({
         create: function (options) {
-            var self = HotUI.BaseControl.create.call(this),
+            var self = ui.Base.create.call(this),
                 dummy = ko.observable();
 
             self.value = ko.computed({
@@ -131,9 +151,75 @@ $(function () {
         }
     });
 
-    HotUI.MultiControl = HotUI.BaseControl.extend({
+    ui.Accordion = ui.Base.extend({
+        create: function (sections) {
+            var self = ui.Base.create.call(this);
+            self._sections = sections;
+            self._activeSec = null;
+            self._$sectionContents = [];
+            return self;
+        },
+        _doHTML: function () {
+            var self = this,
+                $html = $('<div class="hb_accordion"></div>'),
+                sections;
+
+            sections = this._sections.map(function (s, i) {
+                var $label = $(Snippy(
+                        '<div class="hb_label">' +
+                            '<div class="hb_collapsed_icon">&#9656;</div>' +
+                            '<div class="hb_expanded_icon">&#9662;</div>' +
+                            ' ${label}' +
+                        '</div>')({label: s.label})),
+                    $content = $('<div class="hb_content"></div>')
+                        .append(s.element.html(self));
+
+                $label.click(function () {
+                    self.clickLabel(i);
+                });
+
+                self._$sectionContents.push($content);
+
+                return $('<div class="hb_section hb_collapsed"></div>')
+                    .append($label, $content);
+            });
+            return $html.append(sections);
+        },
+        closeSection: function (i) {
+            if (i !== null) {
+                this._$sectionContents[i].animate({
+                    height: 'hide',
+                    duration: 500
+                })
+                .parent().removeClass('hb_expanded')
+                         .addClass('hb_collapsed');
+                this._activeSec = null;
+            }
+        },
+        openSection: function (i) {
+            this._$sectionContents[i].animate({
+                height: 'show',
+                duration: 500
+            })
+            .parent().removeClass('hb_collapsed')
+                     .addClass('hb_expanded');
+
+            this._activeSec = i;
+        },
+        clickLabel: function (labelNum) {
+            var shouldOpen = this._activeSec !== labelNum;
+
+            this.closeSection(this._activeSec);
+
+            if (shouldOpen) {
+                this.openSection(labelNum);
+            }
+        }
+    });
+
+    ui.MultiControl = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.BaseControl.create.call(this, data, parameters);
+            var self = ui.Base.create.call(this, data, parameters);
 
             self._data = data;
             self._parameters = parameters;
@@ -176,12 +262,12 @@ $(function () {
                 for (i = 0; i < self._types.length; i++) {
                     if (data.instanceof(self._types[i].type)) {
                         // REFACTOR EVENTUALLY, ONLY .CREATE SHOULD BE USED
-                        if (typeof HotUI[self._types[i].control] ===
+                        if (typeof ui[self._types[i].control] ===
                                 'function') {
-                            return HotUI[self._types[i].control](data,
+                            return ui[self._types[i].control](data,
                                                                  parameters);
                         } else {
-                            return HotUI[self._types[i].control]
+                            return ui[self._types[i].control]
                                        .create(data, parameters);
                         }
                     }
@@ -190,7 +276,7 @@ $(function () {
 
             this._finishHTML = function () {
                 innerControl = getInnerControl();
-                $element.append(innerControl.html());
+                $element.append(innerControl.html(this));
             };
 
             $element = $('<div class="' + this._cssClass + '"></div>')
@@ -199,11 +285,11 @@ $(function () {
         }
     });
 
-    HotUI.PrimitiveControl = HotUI.BaseControl.extend({
+    ui.Primitive = ui.Base.extend({
         create: function (data, writeFunc) {
-            var self = HotUI.BaseControl.create.call(this),
+            var self = ui.Base.create.call(this),
                 dummy = ko.observable(),
-                validDummy = ko.observable();
+                errorTextDummy = ko.observable();
 
             self.value = ko.computed({
                 read: function () {
@@ -215,55 +301,58 @@ $(function () {
                 }
             });
 
-            self.valid = ko.computed({
+            self.errorText = ko.computed({
                 read: function () {
-                    validDummy();
+                    errorTextDummy();
                     return data.getError();
                 }
             });
 
             data.on('change', function () {dummy.notifySubscribers();});
             data.on('validation', function () {
-                validDummy.notifySubscribers();
+                errorTextDummy.notifySubscribers();
             });
 
             return self;
         },
         _doHTML: function () {
-            return $('<div><p class="invalid" data-bind="text: valid">' +
-                     '</p></div>');
+            return $(
+                '<div><p class="hb_error_message" ' +
+                    'data-bind="css: { hb_invalid: errorText() !== \'\' }, ' +
+                               'text: errorText">' +
+                 '</p></div>');
         }
     });
 
-    HotUI.StringControl = HotUI.PrimitiveControl.extend({
+    ui.String = ui.Primitive.extend({
         create: function (data) {
-            var self = HotUI.PrimitiveControl.create.call(this, data, data.set);
+            var self = ui.Primitive.create.call(this, data, data.set);
             return self;
         },
         _doHTML: function () {
-            return HotUI.PrimitiveControl._doHTML.call(this)
+            return ui.Primitive._doHTML.call(this)
                 .append('<input class="StringControl" type="text" ' +
                         'data-bind="value: value">');
         }
     });
 
-    HotUI.NumberControl = HotUI.PrimitiveControl.extend({
+    ui.Number = ui.Primitive.extend({
         create: function (data) {
-            var self = HotUI.PrimitiveControl.create.call(this, data, 
+            var self = ui.Primitive.create.call(this, data,
                                                           function (value) {
                                                               data.set(+value);
                                                           });
             return self;
         },
         _doHTML: function () {
-            return HotUI.PrimitiveControl._doHTML.call(this)
+            return ui.Primitive._doHTML.call(this)
                 .append('<input type="number" data-bind="value: value">');
         }
     });
 
-    HotUI.BooleanControl = HotUI.PrimitiveControl.extend({
+    ui.Boolean = ui.Primitive.extend({
         create: function (data) {
-            var self = HotUI.PrimitiveControl.create.call(this, data, data.set);
+            var self = ui.Primitive.create.call(this, data, data.set);
             return self;
         },
         _doHTML: function () {
@@ -272,20 +361,20 @@ $(function () {
         }
     });
 
-    HotUI.ContainerControl = HotUI.BaseControl.extend({
+    ui.Container = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.BaseControl.create.call(this);
+            var self = ui.Base.create.call(this);
 
             self.level = parameters.nestingLevel || 1;
             self._elements = ko.observableArray();
 
             function getUIElement(key, value, startCollapsed) {
-                var control = HotUI.FormControl(value, {
+                var control = ui.FormControl(value, {
                         'template': parameters.template,
                         'nestingLevel': self.level + 1,
                     });
                 
-                HotUI.ContainerElementControl.call(control, value, 
+                ui.ContainerElement.call(control, value,
                                                    self._getKey(key), data, 
                                                    startCollapsed);
                 return control;
@@ -347,7 +436,7 @@ $(function () {
         }
     });
 
-    HotUI.ImmutableObjectControl = HotUI.ContainerControl.extend({
+    ui.ImmutableObject = ui.Container.extend({
         _doEach: function (data, func) {
             data.each(func, function (key1, key2) {
                 var val1 = data.get(key1),
@@ -364,18 +453,18 @@ $(function () {
         }
     });
 
-    HotUI.MutableContainerControl = HotUI.ContainerControl.extend({
+    ui.MutableContainer = ui.Container.extend({
         _doHTML: function () {
-            var $html = HotUI.ContainerControl._doHTML.call(this);
+            var $html = ui.Container._doHTML.call(this);
 
             $html.append('<div data-bind="click: addElement"><a>Add</a></div>');
             return $html;
         }
     });
 
-    HotUI.MutableObjectControl = HotUI.MutableContainerControl.extend({
+    ui.MutableObject = ui.MutableContainer.extend({
         create: function (data, parameters) {
-            var self = HotUI.MutableContainerControl
+            var self = ui.MutableContainer
                             .create.call(this, data, parameters);
             self.addElement = function () {
                 data.push(undefined, {id: 'Untitled'});
@@ -384,9 +473,9 @@ $(function () {
         }
     });
 
-    HotUI.ArrayControl = HotUI.MutableContainerControl.extend({
+    ui.Array = ui.MutableContainer.extend({
         create: function (data, parameters) {
-            var self = HotUI.MutableContainerControl
+            var self = ui.MutableContainer
                             .create.call(this, data, parameters);
             self.addElement = function () {
                 data.push();
@@ -398,7 +487,7 @@ $(function () {
         }
     });
 
-    HotUI.ContainerElementControl = Barricade.Blueprint.create(
+    ui.ContainerElement = Barricade.Blueprint.create(
         function (data, label, _parent, startCollapsed) {
             var self = this,
                 oldDoHTML = this._doHTML,
@@ -473,7 +562,7 @@ $(function () {
                     $title.append('<span data-bind="text: id"></span>');
                 }
 
-                if (data.instanceof(HotUI.HOT.ResourcePropertyWrapper) &&
+                if (data.instanceof(hot.ResourcePropertyWrapper) &&
                         data.hasDescription()) {
                     $title.append('<sup><a href="#" ' +
                                   'title="' + data.getDescription() + '">' +
@@ -485,7 +574,7 @@ $(function () {
                 if (_parent.instanceof(Barricade.MutableObject) ||
                         _parent.instanceof(Barricade.Array)) {
                     $title.append('<div class="delete_button" ' +
-                                  'data-bind="click: deleteSelf">X</div>');
+                                  'data-bind="click: deleteSelf">x</div>');
                 }
 
                 return $title;
@@ -496,13 +585,13 @@ $(function () {
             }
 
             this.isValue = ko.computed(function () {
-                return data.instanceof(HotUI.HOT.ResourcePropertyWrapper);
+                return data.instanceof(hot.ResourcePropertyWrapper);
             });
 
             this.isFunctionType = ko.computed(function () {
                 isFunctionTypeDummy();
                 return self.isValue() && 
-                       data.getValue().instanceof(HotUI.HOT.IntrinsicFunction);
+                       data.getValue().instanceof(hot.IntrinsicFunction);
             });
 
             this.id = ko.computed({
@@ -580,14 +669,14 @@ $(function () {
             };
         });
 
-    HotUI.ResourcePropertyControl = HotUI.BaseControl.extend({
+    ui.ResourceProperty = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.BaseControl.create.call(this, data, parameters),
+            var self = ui.Base.create.call(this, data, parameters),
                 $element,
-                innerControl = HotUI.FormControl(data.getValue(), parameters);
+                innerControl = ui.FormControl(data.getValue(), parameters);
 
             self._finishHTML = function () {
-                $element.append(innerControl.html());
+                $element.append(innerControl.html(this));
             };
 
             self._doHTML = function () {
@@ -598,7 +687,7 @@ $(function () {
             };
 
             data.on('change', function () {
-                innerControl = HotUI.FormControl(data.getValue(), parameters);
+                innerControl = ui.FormControl(data.getValue(), parameters);
                 $element.empty().append(innerControl.html());
             });
 
@@ -606,16 +695,16 @@ $(function () {
         }
     });
 
-    HotUI.IntrinsicFunctionControl = HotUI.BaseControl.extend({
+    ui.IntrinsicFunction = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.BaseControl.create.call(this, data, parameters),
-                innerControl = HotUI.FunctionControl.create(data, parameters);
+            var self = ui.Base.create.call(this, data, parameters),
+                innerControl = ui.FunctionSelect.create(data, parameters);
 
             self._doHTML = function () {
                 var $innerControl = $('<div class="inner_control"></div>');
 
                 self._finishHTML = function () {
-                    $innerControl.append(innerControl.html());
+                    $innerControl.append(innerControl.html(this));
                 };
 
                 return $('<div class="IntrinsicFunctionControl"></div>')
@@ -626,38 +715,38 @@ $(function () {
         }
     });
 
-    HotUI.PrimitiveSelectorControl = HotUI.MultiControl.extend({
+    ui.PrimitiveSelector = ui.MultiControl.extend({
         _cssClass: 'PrimitiveSelector',
         _types: [
             {
                 label: 'Boolean',
-                type: HotUI.HOT.Primitive.bool,
-                control: 'BooleanControl'
+                type: hot.Primitive.bool,
+                control: 'Boolean'
             }, {
                 label: 'List',
-                type: HotUI.HOT.Primitive.array,
-                control: 'ArrayControl'
+                type: hot.Primitive.array,
+                control: 'Array'
             }, {
                 label: 'Map',
-                type: HotUI.HOT.Primitive.object,
-                control: 'MutableObjectControl'
+                type: hot.Primitive.object,
+                control: 'MutableObject'
             }, {
                 label: 'Number',
-                type: HotUI.HOT.Primitive.number,
-                control: 'NumberControl'
+                type: hot.Primitive.number,
+                control: 'Number'
             }, {
                 label: 'String',
-                type: HotUI.HOT.Primitive.string,
-                control: 'StringControl'
+                type: hot.Primitive.string,
+                control: 'String'
             }
         ]
     });
 
-    HotUI.SchemalessContainerControl = HotUI.BaseControl.extend({
+    ui.SchemalessContainer = ui.Base.extend({
         create: function (data, parameters) {
-            var self = HotUI.BaseControl.create.call(this, data, parameters),
-                barricadeData = HotUI.HOT.Primitive.Factory(data.get()),
-                innerControl = HotUI.NormalFormControl(barricadeData,
+            var self = ui.Base.create.call(this, data, parameters),
+                barricadeData = hot.Primitive.Factory(data.get()),
+                innerControl = ui.NormalFormControl(barricadeData,
                                                        parameters);
 
             barricadeData.on('childChange', function () {
@@ -672,7 +761,7 @@ $(function () {
                 var $element = $('<div></div>');
 
                 self._finishHTML = function () {
-                    $element.append(innerControl.html());
+                    $element.append(innerControl.html(this));
                 };
 
                 return $element;
@@ -682,51 +771,52 @@ $(function () {
         }
     });
 
-    HotUI.FunctionControl = HotUI.MultiControl.extend({
-        _cssClass: 'FunctionControl',
+    ui.FunctionSelect = ui.MultiControl.extend({
+        _cssClass: 'FunctionSelect',
         _types: [
             {
                 label: 'Attribute',
-                type: HotUI.HOT.GetAttribute,
-                control: 'GetAttributeControl'
+                type: hot.GetAttribute,
+                control: 'GetAttribute'
             }, {
                 label: 'File',
-                type: HotUI.HOT.GetFile,
-                control: 'GetFileControl'
+                type: hot.GetFile,
+                control: 'GetFile'
             }, {
                 label: 'Parameter',
-                type: HotUI.HOT.GetParameter,
-                control: 'GetParameterControl'
+                type: hot.GetParameter,
+                control: 'GetParameter'
             }, {
                 label: 'Resource',
-                type: HotUI.HOT.GetResource,
-                control: 'GetResourceControl'
+                type: hot.GetResource,
+                control: 'GetResource'
             }, {
                 label: 'Resource Facade',
-                type: HotUI.HOT.ResourceFacade,
-                control: 'ResourceFacadeControl'
+                type: hot.ResourceFacade,
+                control: 'ResourceFacade'
             }, {
                 label: 'String Replace',
-                type: HotUI.HOT.StringReplace,
-                control: 'StringReplaceControl'
+                type: hot.StringReplace,
+                control: 'StringReplace'
+            }, {
+                label: 'Special Parameter',
+                type: hot.GetParameterSpecial,
+                control: 'GetParameterSpecial'
             }
         ]
     });
 
-    HotUI.GetAttributeControl = (function () {
-        function constructor(data, parameters) {
-            if (!(this instanceof constructor)) {
-                return new constructor(data, parameters);
-            }
-
-            var attr = data.get('get_attr'),
+    ui.GetAttribute = ui.Base.extend({
+        create: function (data, parameters) {
+            var self = ui.Base.create.call(this),
+                attr = data.get('get_attr'),
                 resourceControl,
                 valueControl,
                 $element,
                 $attributeSelect,
                 $valueControl;
                 
-            resourceControl = HotUI.ResourceSelectControl(
+            resourceControl = ui.ResourceSelect.create(
                 function () {
                     return attr.get('resource');
                 },
@@ -762,15 +852,15 @@ $(function () {
                     valueControl = null;
                     return '';
                 } else {
-                    valueControl = HotUI.SchemalessContainerControl.create(
+                    valueControl = ui.SchemalessContainer.create(
                                         attr.get('value'));
-                    return valueControl.html();
+                    return valueControl.html(self);
                 }
             }
 
             function getInnerHTML() {
                 return [
-                    resourceControl.html(),
+                    resourceControl.html(self),
                     $('<div class="attribute_select"></div>')
                         .append(getAttributeSelect()),
                     $('<div class="value_control"><div>')
@@ -778,7 +868,7 @@ $(function () {
                 ];
             }
 
-            this.attach = function ($el) {
+            self.attach = function ($el) {
                 $element = $el;
                 $attributeSelect = $element.children('.attribute_select');
                 $valueControl = $element.children('.value_control');
@@ -813,28 +903,28 @@ $(function () {
                 attachAttributeSelect();
             };
 
-            this.html = function () {
+            self.html = function () {
                 var $el = $('<div class="GetAttributeControl"></div>')
                            .append(getInnerHTML());
                 this.attach($el);
                 return $el;
             };
+
+            return self;
         }
+    });
 
-        return constructor;
-    }());
+    ui.GetFile = ui.String.extend({
+        create: function (data, parameters) {
+            return ui.String.create.call(
+                this, data.get('get_file'), parameters);
+        }
+    });
 
-    HotUI.GetFileControl = function (data, parameters) {
-        return HotUI.StringControl.create(data.get('get_file'), parameters);
-    };
-
-    HotUI.GetParameterControl = (function () {
-        function constructor(data, parametersIn) {
-            if (!(this instanceof constructor)) {
-                return new constructor(data, parametersIn);
-            }
-
-            var parameters = parametersIn.template.get('parameters'),
+    ui.GetParameter = ui.Base.extend({
+        create: function (data, parametersIn) {
+            var self = ui.Base.create.call(this),
+                parameters = parametersIn.template.get('parameters'),
                 $element,
                 $select;
 
@@ -869,7 +959,7 @@ $(function () {
                 return getSelect();
             }
 
-            this.attach = function ($el) {
+            self.attach = function ($el) {
                 $element = $el;
                 $select = $element.children('select');
 
@@ -885,35 +975,28 @@ $(function () {
                 });
             };
 
-            this.html = function () {
+            self.html = function () {
                 var $el = $('<div class="GetParameterControl"></div>')
                               .append(getInnerHTML());
                 this.attach($el);
                 return $el;
             };
+
+            return self;
         }
+    });
 
-        return constructor;
-    }());
+    ui.GetParameterSpecial = ui.String.extend({
+        create: function (data, parameters) {
+            return ui.String.create.call(this, data.get('get_param'),
+                                         parameters);
+        }
+    });
 
-    HotUI.GetResourceControl = function (data, parameters) {
-        return HotUI.ResourceSelectControl(
-            function () {
-                return data.get('get_resource');
-            },
-            function (newVal) {
-                data.set('get_resource', newVal);
-            },
-            parameters.template.get('resources'));
-    };
-
-    HotUI.ResourceSelectControl = (function () {
-        function constructor(getter, setter, resources) {
-            if (!(this instanceof constructor)) {
-                return new constructor(getter, setter, resources);
-            }
-
-            var $element,
+    ui.ResourceSelect = ui.Base.extend({
+        create: function (getter, setter, resources) {
+            var self = ui.Base.create.call(this),
+                $element,
                 $select;
 
             function getResourceID() {
@@ -947,7 +1030,7 @@ $(function () {
                 return getSelect();
             }
 
-            this.attach = function ($el) {
+            self.attach = function ($el) {
                 $element = $el;
                 $select = $element.children('select');
 
@@ -963,63 +1046,79 @@ $(function () {
                 });
             };
 
-            this.html = function () {
+            self.html = function () {
                 var $el = $('<div class="ResourceSelectControl"></div>')
                            .append(getInnerHTML());
                 this.attach($el);
                 return $el;
             };
+
+            return self;
         }
+    });
 
-        return constructor;
-    }());
+    ui.GetResource = ui.ResourceSelect.extend({
+        create: function (data, parameters) {
+            return ui.ResourceSelect.create.call(
+                this,
+                function () { return data.get('get_resource'); },
+                function (newVal) { data.set('get_resource', newVal); },
+                parameters.template.get('resources'));
+        }
+    });
 
-    HotUI.ResourceFacadeControl = function (data, parameters) {
-        return HotUI.StringControl.create(
-            data.get('resource_facade'), parameters);
-    };
+    ui.ResourceFacade = ui.String.extend({
+        create: function (data, parameters) {
+            return ui.String.create.call(this, data.get('resource_facade'),
+                                         parameters);
+        }
+    });
 
-    HotUI.StringReplaceControl = function (data, parameters) {
-        return HotUI.FormControl(data.get('str_replace'), parameters);
-    };
+    ui.StringReplace = ui.ImmutableObject.extend({
+        create: function (data, parameters) {
+            return ui.ImmutableObject.create.call(
+                this, data.get('str_replace'), parameters);
+        }
+    });
 
-    HotUI.ParameterConstraintControl = HotUI.MultiControl.extend({
+    ui.ParameterConstraint = ui.MultiControl.extend({
         _cssClass: 'ParameterConstraintControl',
         _types: [
             {
                 label: 'Length',
-                type: HotUI.HOT.LengthParameterConstraint,
-                control: 'ImmutableObjectControl'
+                type: hot.LengthParameterConstraint,
+                control: 'ImmutableObject'
             }, {
                 label: 'Range',
-                type: HotUI.HOT.RangeParameterConstraint,
-                control: 'ImmutableObjectControl'
+                type: hot.RangeParameterConstraint,
+                control: 'ImmutableObject'
             }, {
                 label: 'Allowed Values',
-                type: HotUI.HOT.AllowedValuesParameterConstraint,
-                control: 'ImmutableObjectControl'
+                type: hot.AllowedValuesParameterConstraint,
+                control: 'ImmutableObject'
             }, {
                 label: 'Allowed Pattern',
-                type: HotUI.HOT.AllowedPatternParameterConstraint,
-                control: 'ImmutableObjectControl'
+                type: hot.AllowedPatternParameterConstraint,
+                control: 'ImmutableObject'
             }, {
                 label: 'Custom Constraint',
-                type: HotUI.HOT.CustomParameterConstraint,
-                control: 'ImmutableObjectControl'
+                type: hot.CustomParameterConstraint,
+                control: 'ImmutableObject'
             }
         ]
     });
 
-    HotUI.ResourcePropertyWrapperSelector = HotUI.BaseControl.extend({
+    ui.ResourcePropertySelector = ui.Base.extend({
         create: function (resource) {
-            var self = HotUI.BaseControl.create.call(this);
+            var self = ui.Base.create.call(this);
             self._resource = resource;
             return self;
         },
         _doHTML: function () {
-            var properties = this._resource.get('properties'),
-                $html =
-                    $('<div class="ResourcePropertyWrapperSelector"></div>');
+            var backingType = this._resource.get('properties').getBackingType(),
+                properties = backingType.get('properties'),
+                $html = $('<div class="ResourcePropertySelector"></div>'),
+                $select = $('<select></select>');
 
             $html.delegate('p', 'click', function (e) {
                 var $target = $(e.target);
@@ -1027,52 +1126,50 @@ $(function () {
                 $target.addClass('selected');
             });
 
-            function appendProperties($div, data) {
-                data.each(function (key, value) {
-                    var $label = $('<p>' + key + '<p>'),
-                        $child = $('<div class="property_list"></div>')
-                                     .append($label);
-                    if (value.instanceof(HotUI.HOT.ResourcePropertyWrapper) &&
-                            value.getValue().instanceof(Barricade.Container) &&
-                            !value.getValue()
-                                  .instanceof(HotUI.HOT.IntrinsicFunction)) {
-                        appendProperties($child, value.getValue());
-                    } else if (value.instanceof(Barricade.Container)) {
-                        $label.addClass('disabled');
-                        appendProperties($child, value);
-                    }
+            function createOption(label, value, level) {
+                return Snippy(
+                    '<option value="${value}">${indent}${label}</option>')({
+                        label: label === '*' ? '(new entry)' : label,
+                        value: value,
+                        indent: Array(4 * level + 1).join('&nbsp;')
+                    });
+           }
 
-                    $div.append($child);
+            function getProperties(data, level, prefix) {
+                var result = '';
+
+                data.each(function (key, value) {
+                    var newPrefix;
+
+                    key = value.hasID() ? value.getID() : key;
+                    newPrefix = prefix ? prefix + ',' + key : key;
+
+                    result += createOption(key, newPrefix, level);
+
+                    if (value.instanceof(HotUI.HOT.ResourceProperty_map) ||
+                            value.instanceof(HotUI.HOT.ResourceProperty_list)) {
+                        result += getProperties(value.get('schema'), level + 1,
+                                                newPrefix);
+                    }
                 });
+
+                return result;
             }
 
-            appendProperties($html, properties);
+            $html.append($select.append(getProperties(properties, 0, null)));
 
-            this._html = $html;
+            this._select = $select;
             
             return $html;
         },
         getSelection: function () {
-            var $html = this._html,
-                $selected = $html.find('p.selected').parent(),
-                curLabel,
-                result = [];
-
-            if ($selected.length) {
-                while (!$selected.is($html)) {
-                    curLabel = $selected.children('p').html();
-                    result.unshift(isNaN(+curLabel) ? curLabel : +curLabel);
-                    $selected = $selected.parent();
-                }
-            }
-
-            return result;
+            return this._select.val().split(',');
         }
     });
 
-    HotUI.ResourceAttributeSelector = HotUI.BaseControl.extend({
+    ui.ResAttributeSelector = ui.Base.extend({
         create: function (resource) {
-            var self = HotUI.BaseControl.create.call(this);
+            var self = ui.Base.create.call(this);
             self._resource = resource;
             return self;
         },
@@ -1090,4 +1187,51 @@ $(function () {
             return this._html.val();
         }
     });
-});
+
+    ui.Modal = BaseObject.extend({
+        create: function (options) {
+            var self = this.extend({});
+
+            if (!options.buttons) {
+                options.buttons = [{'label': 'Okay'}];
+            }
+            self._options = options;
+            return self;
+        },
+        display: function () {
+            var self = this;
+            var $container = $('#hb_modal_layer'),
+                $buttons = $('<div class="hb_modal_buttons"></div>'),
+                $modal = $(Snippy(
+                    '<div class="hb_modal ${cssClass}">' +
+                        '<div class="hb_modal_title">${title}</div>' +
+                        '<div class="hb_modal_content">${content}</div>' +
+                    '</div>')(this._options));
+
+            $buttons.append(this._options.buttons.map(function (button) {
+                var $button = $(Snippy(
+                        '<div class="hb_modal_button ${cssClass}">' +
+                        '${label}</div>')(button));
+
+                $button.click(function () {
+                    $container.fadeOut(250, function () {
+                        $modal.remove();
+                    });
+
+                    if (button.action) {
+                        button.action();
+                    }
+                });
+
+                return $button;
+            }));
+
+            $modal.append($buttons);
+            ko.applyBindings(this, $modal[0]);
+            $container.append($modal).fadeIn(250);
+            return this;
+        }
+    });
+
+    return ui;
+}(HotUI.HOT));

@@ -1,11 +1,11 @@
 /* Copyright 2014 Rackspace
-  
+
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
    You may obtain a copy of the License at
-  
+
        http://www.apache.org/licenses/LICENSE-2.0
-  
+
    Unless required by applicable law or agreed to in writing, software
    distributed under the License is distributed on an "AS IS" BASIS,
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,43 +15,22 @@
 
 #hotui_app {
     background-color: white;
-    bottom: 20px;
+    bottom: 0;
     left: 0;
     overflow: hidden;
     position: absolute;
     right: 0;
-    top: 55px; /* navbar is at 55px versus 50px due to
-                  .divider-vertical (height: 55px)
-                  .navbar-nav > li > a (padding-top: 20px adds 5px)
-               */
-}
-
-#hotui_bottom_strip {
-    background-color: black;
-    bottom: 0;
-    color: white;
-    height: 20px;
-    position: fixed;
-    text-align: center;
-    width: 100%;
-}
-
-#hotui_beta_warning {
-    position: absolute;
-    left: 50%;
-}
-
-#hotui_beta_warning > p {
-    position: relative;
-    left: -50%;
-    color: red;
+    top: 0;
 }
 
 /*
  * Topology
  */
 #hotui_topology {
+    /* http://colorschemedesigner.com/csd-3.5/#3B22kcc--6q6q */
+    background: #a6d0ff url(/static/hotui/img/hexagons.svg) repeat;
     bottom: 0;
+    cursor: move;
     left: 0;
     position:absolute;
     right: 0;
@@ -61,12 +40,79 @@
 .node {
 }
 
+.node.hb_can_connect_to_good > .hb_bg {
+    fill: #cfc;
+}
+
+.node.hb_can_connect_to_hover > .hb_bg {
+    fill: #cef;
+}
+
 .node text {
-    font-size: 6px;
+    font-size: 7px;
+}
+
+.node > .hb_bg {
+    fill: white;
+    stroke: #3480c2;
+    stroke-width: 2px;
+}
+
+.node .resource_name {
+    font-size: 9px;
+    font-weight: bold;
+}
+
+.hb_node_buttons > .hb_link > rect,
+.hb_node_buttons > .hb_pin > rect {
+    stroke-width: 1.5;
+    stroke: #3480c2;
+}
+
+.node .hb_node_buttons > .hb_link > rect,
+.node .hb_node_buttons > .hb_pin > rect,
+.node.hb_fixed .hb_node_buttons > .hb_pin:hover > rect {
+    fill: transparent;
+}
+
+.node .hb_node_buttons > .hb_link:hover > rect,
+.node.hb_linking .hb_node_buttons > .hb_link > rect,
+.node .hb_node_buttons > .hb_pin:hover > rect,
+.node.hb_fixed .hb_node_buttons > .hb_pin > rect {
+    fill: #3480c2;
+}
+
+.hb_node_buttons > .hb_link > .hb_link_icon *,
+.hb_node_buttons > .hb_pin > .hb_pin_icon * {
+    stroke-width: 8;
+    fill: transparent;
+}
+
+.node .hb_node_buttons > .hb_link > .hb_link_icon *,
+.node .hb_node_buttons > .hb_pin > .hb_pin_icon *,
+.node.hb_fixed .hb_node_buttons > .hb_pin:hover > .hb_pin_icon * {
+    stroke: #3480c2;
+}
+
+.node .hb_node_buttons > .hb_link:hover > .hb_link_icon *,
+.node.hb_linking .hb_node_buttons > .hb_link > .hb_link_icon *,
+.node .hb_node_buttons > .hb_pin:hover > .hb_pin_icon *,
+.node.hb_fixed .hb_node_buttons > .hb_pin > .hb_pin_icon * {
+    stroke: white;
+}
+
+.node .hb_link > line {
+    display: none;
+    stroke: #3480c2;
+    stroke-width: 2;
+}
+
+.node.hb_linking .hb_link > line {
+    display: inline;
 }
 
 .link {
-    stroke-width: 1px;
+    stroke-width: 2px;
 }
 
 .link.depends_on {
@@ -84,11 +130,6 @@
     fill: red;
 }
 
-.label > .background {
-    fill: rgba(255, 255, 255, 0.9);
-    stroke: rgba(52, 128, 194, 0.4); /* === #3480C2 */
-}
-
 /*
  * Overlay
  */
@@ -99,107 +140,68 @@
     padding: 0;
 }
 
-#hotui_overlay > .get_json,
-#hotui_overlay > .load_from_url,
-#hotui_overlay > .download_template {
-    background-color: red;
-    cursor: pointer;
-    height: 50px;
-    width: 200px;
-    text-align:center;
-    position: absolute;
-    right: 5px;
-    border-radius: 10px;
-    line-height: 50px;
-    font-size: 20px;
-}
-
-#hotui_overlay > .get_json {
-    top: 5px;
-}
-
-#hotui_overlay > .load_from_url {
-    top: 60px;
-}
-
-#hotui_overlay > .download_template {
-    top: 115px;
-}
-
-.load_from_url_input {
-    background-color: white;
-    border: 1px solid black;
-    cursor: default;
-    font-size: 18px;
-    line-height: 18px;
-    padding: 10px;
-    position: absolute;
-    right: 0;
-    top: 0;
-    white-space: nowrap;
-}
-
-.load_from_url_input > input {
-    width: 300px;
-}
-
-.load_from_url_input > .load_button {
-    background-color: lime;
-    cursor: pointer;
-    display: inline-block;
-    margin: 5px;
-    padding: 5px;
-}
-
-.load_from_url_input > .close_button {
-    background-color: red;
-    cursor: pointer;
-    display: inline-block;
-    margin: 5px;
-    padding: 5px;
-}
-
-#hotui_nav {
-    background-color: white;
-    border-radius: 4px;
-    left: 10px;
-    opacity: 0.95;
-    position: absolute;
-    top: 10px;
-}
-
 #hotui_side_panel {
-    bottom: 10px;
-    left: 10px;
+    background-color: #f0f0f0;
+    bottom: 30px;
+    left: 0;
     position: absolute;
-    width: 40%;
-    top: 60px;
+    width: 400px;
+    top: 0;
 }
 
 #hotui_side_panel_content {
-    bottom: 5px;
-    left: 5px;
-    overflow-y: auto;
-    padding-right: 5px;
+    bottom: 0;
+    left: 0;
     position: absolute;
-    right: 5px;
-    top: 25px;
+    right: 0;
+    top: 0;
 }
 
-#hotui_side_panel_content::-webkit-scrollbar {
-    width: 8px;
+#hotui_navbar {
+    background-color: #e0e0e0;
+    bottom: 0;
+    height: 30px;
+    left: 0;
+    position: absolute;
+    right: 0;
 }
 
-#hotui_side_panel_content::-webkit-scrollbar-track {
+#hotui_navbar > .hb_left_side,
+#hotui_navbar > .hb_right_side {
+    bottom: 0;
+    position: absolute;
+    top: 0;
 }
 
-#hotui_side_panel_content::-webkit-scrollbar-thumb {
+#hotui_navbar > .hb_left_side {
+    left: 0;
+}
+
+#hotui_navbar > .hb_right_side {
+    right: 0;
+}
+
+#hotui_navbar > * > .nav_button {
+    cursor: pointer;
+    display: inline-block;
+    height: 100%;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 5px;
+}
+
+#hotui_navbar > * > .nav_button:hover {
+    background-color: #d0d0d0;
+}
+
+#hotui_navbar > * > .nav_button.active {
     background-color: #c0c0c0;
-    border-radius: 4px;
 }
 
 #hotui_side_panel_content hr {
     border-top: 1px solid #888;
+    margin-bottom: 10px;
+    margin-top: 10px;
 }
 
 #hotui_side_panel_content .property_map {
@@ -210,6 +212,169 @@
 #hotui_side_panel_content .PrimitiveArrayControl {
     border: 2px solid aqua;
     padding: 2px;
+}
+
+/*
+ * Source Panel
+ */
+#hotui_source_panel {
+    background-color: #000;
+    bottom: 30px;
+    padding-top: 32px;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 0;
+}
+
+#hotui_source_panel > .CodeMirror {
+    height: 100%;
+    min-width: 450px;
+    width: 100%;
+}
+
+#hotui_source_panel .CodeMirror-vscrollbar::-webkit-scrollbar {
+    width: 14px;
+}
+
+#hotui_source_panel .CodeMirror-vscrollbar::-webkit-scrollbar-thumb {
+    background-color: #505050;
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 7px;
+}
+
+#hotui_source_panel > .hb_side_buttons {
+    right: 5px;
+    position: absolute;
+    top: 5px;
+    z-index: 10;
+}
+
+#hotui_source_panel > .hb_side_buttons > .hb_showhide,
+#hotui_source_panel > .hb_side_buttons > .hb_save,
+#hotui_source_panel > .hb_side_buttons > .hb_expand {
+    background-color: #3480c2;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    margin-left: 3px;
+    padding: 2px 8px;
+    right: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#hotui_source_panel > .hb_side_buttons.hb_invisible > .hb_save,
+#hotui_source_panel > .hb_side_buttons.hb_invisible > .hb_expand {
+    display: none;
+}
+
+#hotui_source_panel > .hb_side_buttons > .hb_save.hb_dirty {
+    background-color: red;
+}
+
+/*
+ * Modals
+ */
+#hb_modal_layer {
+    bottom: 0;
+    display: none;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 200;
+}
+
+#hb_modal_layer > .hb_screen {
+    background-color: black;
+    height: 100%;
+    opacity: 0.5;
+    position: absolute;
+    width: 100%;
+}
+
+.hb_modal {
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    left: 50%;
+    padding: 15px;
+    position: absolute;
+    top: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+}
+
+.hb_modal > .hb_modal_title {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.hb_modal > .hb_modal_buttons {
+    float: right;
+    margin-top: 10px;
+}
+
+.hb_modal_button {
+    background-color: #b0b0b0;
+    border: 1px solid #b0b0b0;
+    border-radius: 3px;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    margin: 2px;
+    padding: 3px 5px;
+}
+
+.hb_modal_button:hover {
+    background-color: white;
+    color: #b0b0b0;
+}
+
+.hb_modal_button.hb_red {
+    background-color: red;
+    border: 1px solid red;
+}
+
+.hb_modal_button.hb_red:hover {
+    background-color: white;
+    color: red;
+}
+
+.hb_modal_button.hb_green {
+    background-color: #76c228;
+    border: 1px solid #76c228;
+}
+
+.hb_modal_button.hb_green:hover {
+    background-color: white;
+    color: #76c228;
+}
+
+.hb_load_from_url {
+    width: 100%;
+}
+
+/*
+ * Form Elements
+ */
+
+.hb_scroll {
+    overflow-y: auto;
+}
+
+.hb_scroll::-webkit-scrollbar {
+    width: 14px;
+}
+
+.hb_scroll::-webkit-scrollbar-thumb {
+    background-color: #c0c0c0;
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 7px;
 }
 
 .Container {
@@ -277,9 +442,11 @@
 }
 
 .ElementWrapper .delete_button {
+    border-radius: 10px;
     color: red;
-    height: 24px;
-    line-height: 24px;
+    height: 20px;
+    line-height: 18px;
+    margin-top: 2px;
     position: absolute;
     right: 4px;
     text-align: center;
@@ -331,29 +498,6 @@
     display: none;
 }
 
-.ResourcePropertyWrapperSelector .property_list {
-    margin-left: 10px;
-}
-
-.ResourcePropertyWrapperSelector .property_list > p:hover {
-    background-color: rgba(0, 0, 255, 0.05);
-    cursor: pointer;
-}
-
-.ResourcePropertyWrapperSelector .property_list > p.disabled {
-    color: grey;
-}
-
-.ResourcePropertyWrapperSelector .property_list > p.selected {
-    background-color: rgba(0, 0, 255, 0.1);
-}
-
-.create_dependency_button {
-    background-color: green;
-    height: 30px;
-    width: 100px;
-}
-
 .use_function_button {
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 7px;
@@ -377,107 +521,174 @@
     color: red;
 }
 
-#hotui_side_panel > .background {
-    height: 100%;
-    opacity: 0.95;
-    position: absolute;
-    width: 100%;
-}
-
-#hotui_side_panel > .close_button {
-    color: black;
+#hotui_side_panel > .hb_collapse_button {
+    background-color: #f0f0f0;
+    border-bottom-right-radius: 6px;
     cursor: pointer;
     font-weight: bold;
-    height: 20px;
-    opacity: 0.7;
+    height: 23px;
+    padding-right: 2px;
     position: absolute;
-    right: 0;
+    right: -23px;
     text-align: center;
     top: 0;
-    width: 25px;
+    width: 23px;
 }
 
-#hotui_side_panel > .close_button:hover {
-    opacity: 1;
+#hotui_side_panel > .hb_collapse_button:hover {
+    color: #3480c2;
 }
 
 #hotui_side_panel .StringControl {
     width: 100%;
 }
 
-#hotui_side_panel .invalid {
+#hotui_side_panel .hb_error_message {
     color: red;
+    display: none;
 }
 
-#hotui_json_box {
-    /* just a mess of properties, needs refactoring */
-    cursor: default;
-    background-color: white;
-    position: absolute;
-    right:0;
-    top:0;
-    width: 700px;
-    height: 500px;
-    border: 1px solid black;
+#hotui_side_panel .hb_error_message.hb_invalid {
+    display: block;
 }
 
-#hotui_json_box .json {
-    width: 100%;
-    height: 100%;
-    white-space: nowrap;
-    overflow: auto;
-    font-family:monospace;
-    font-size:16px;
-    line-height:20px;
-    padding:5px;
-    padding-top: 20px;
-    text-align: left;
+.hb_accordion > .hb_section > .hb_label {
+    border-top: 1px solid #d0d0d0;
+    font-size: 20px;
+    padding: 2px;
 }
 
-#hotui_json_box .validate_button {
-    position: absolute;
+.hb_accordion > .hb_section:first-child > .hb_label {
+    border-top: none;
+}
+
+.hb_accordion > .hb_section > .hb_label:hover {
+    background-color: #d0d0d0;
     cursor: pointer;
-    background-color: aqua;
-    text-align: center;
-    top: 0;
-    right: 155px;
-    height: 20px;
-    font-size: 16px;
-    line-height: 20px;
 }
 
-#hotui_json_box .update_button {
-    position: absolute;
-    cursor: pointer;
-    background-color: lime;
-    text-align: center;
-    top: 0;
-    right: 25px;
-    height: 20px;
-    font-size: 16px;
-    line-height: 20px;
+.hb_accordion > .hb_section > .hb_label > .hb_collapsed_icon,
+.hb_accordion > .hb_section > .hb_label > .hb_expanded_icon {
+    width: 13px;
+    display: none;
+}
+.hb_accordion > .hb_section.hb_collapsed > .hb_label > .hb_collapsed_icon {
+    display: inline-block;
 }
 
-#hotui_json_box .json_close_button {
-    position: absolute;
-    cursor: pointer;
-    background-color: red;
-    text-align: center;
-    top: 0;
-    right: 0;
-    width: 20px;
-    height: 20px;
-    font-size: 16px;
-    line-height: 20px;
+.hb_accordion > .hb_section.hb_expanded > .hb_label > .hb_expanded_icon {
+    display: inline-block;
+}
+
+.hb_accordion > .hb_section > .hb_content {
+    display: none;
 }
 
 /*
  * Panels
  */
 
+.hb_panel {
+    height: 100%;
+    padding: 5px 10px;
+}
+
+/* Home */
+.hb_home {
+    padding: 0;
+}
+
+.hb_home > .hb_add_resource {
+    padding: 5px 10px;
+}
+
+.hb_search_resources {
+    width: 100%;
+}
+
+.hb_search_resources:focus {
+    outline: none;
+}
+
+.hb_home > .hb_ref_arch {
+    border-top: 1px solid #e0e0e0;
+    padding: 5px 10px;
+}
+
+.hb_prebuilt_config {
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-block;
+    height: 105px;
+    margin: 2px;
+    vertical-align: top;
+    text-align: center;
+    padding: 3px;
+    width: 85px;
+}
+
+.hb_prebuilt_config:hover {
+    background-color: #d0d0d0;
+}
+
+.hb_prebuilt_config > img {
+    height: 80px;
+    width: 100%;
+}
+
+#hotui_overlay > .hb_prebuilt_config_detail {
+    background-color: #f0f0f0;
+    border: 1px solid #c0c0c0;
+    border-radius: 5px;
+    margin-left: 5px;
+    padding: 10px 15px;
+    position: absolute;
+    max-width: 300px;
+}
+
+#hotui_overlay > .hb_prebuilt_config_detail > .hb_detail_arrow {
+    border-bottom: 5px solid transparent;
+    border-right: 5px solid #c0c0c0;
+    border-top: 5px solid transparent;
+    left: -5px;
+    margin-top: -5px;
+    position: absolute;
+    top: 50%;
+}
+
 /* Add Resource */
+.hb_more_resources {
+
+}
+
+.hb_resource_org {
+    border-top: 1px solid #b0b0b0;
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+.hb_resource_org:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.hb_resource_org > h3 {
+    text-align: center;
+}
+
 .resource_draggable {
+    cursor: pointer;
+    margin-left: 15px;
     position: relative;
+}
+
+.resource_draggable:hover {
+    background-color: #d0d0d0;
+}
+
+.resource_draggable.hb_dragging:hover {
+    background-color: transparent;
 }
 
 .resource_draggable > div {
@@ -505,6 +716,10 @@
     background-image: url(/static/hotui/img/icon-dns.svg);
 }
 
+.resource_draggable[type*=RandomString] > div {
+    background-image: url(/static/hotui/img/icon-random-string.svg);
+}
+
 .resource_draggable[type*=Key] > div {
     background-image: url(/static/hotui/img/icon-private-cloud.svg);
 }
@@ -519,10 +734,44 @@
     background-image: url(/static/hotui/img/icon-load-balancers.svg);
 }
 
+.resource_draggable[type*=ChefSolo] > div {
+    background-image: url(/static/hotui/img/chef.svg);
+}
+
 .resource_draggable[type*=AutoScale] > div {
     background-image: url(/static/hotui/img/icon-auto-scale.svg);
 }
 
 .resource_hidden {
     opacity: 0;
+}
+
+/* Template */
+.hb_template_panel {
+}
+
+/* Link Creator */
+.hb_link_create_panel > .hb_depends_on,
+.hb_link_create_panel > .hb_properties,
+.hb_link_create_panel > .hb_attributes,
+.hb_link_create_panel > .hb_get_resource {
+    display: none;
+}
+
+.hb_link_create_panel.depends_on > .hb_depends_on,
+.hb_link_create_panel.get_resource > .hb_properties,
+.hb_link_create_panel.get_attr > .hb_properties,
+.hb_link_create_panel.get_attr > .hb_attributes,
+.hb_link_create_panel.get_resource > .hb_get_resource {
+    display: block;
+}
+
+.hb_link_create_panel .hb_create_dependency {
+    background-color: #3480c2;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    display: inline-block;
+    margin-left: 3px;
+    padding: 2px 8px;
 }

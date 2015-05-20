@@ -14,6 +14,7 @@
 
 import logging
 import json
+import yaml
 
 from django.views.generic import TemplateView  # noqa
 
@@ -34,8 +35,43 @@ class IndexView(TemplateView):
         resource_names = [t.resource_type for t in
                           hotui_api.resource_type_list(request, heat_endpoint)]
 
+        template_url = ('https://raw.githubusercontent.com/'
+                       'rackspace-orchestration-templates/%s')
+
+        prebuilt_configs = [{
+                'name': 'LAMP',
+                'path': 'lamp/master/lamp.yaml',
+                'icon': '/static/hotui/img/lamp.png'
+            }, {
+                'name': 'WordPress',
+                'path': 'wordpress-single/master/wordpress-single.yaml',
+                'icon': '/static/hotui/img/wordpress-logo.svg'
+            }, {
+                'name': 'PHP',
+                'path': 'php-app-single/master/php_app_single.yaml',
+                'icon': '/static/hotui/img/php.svg'
+            }, {
+                'name': 'Magento',
+                'path': 'magento-single/master/magento-single.yaml',
+                'icon': '/static/hotui/img/magento.png'
+            }, {
+                'name': 'Drupal',
+                'path': 'drupal-single/master/drupal-single.yaml',
+                'icon': '/static/hotui/img/drupal.png'
+            }]
+
+        def get_template(path):
+            return yaml.safe_load(
+                hotui_api.get_template_from_url(template_url % path))
+
+        #add_template_to_context()
         context['region_value'] = region_value
         context['stack_endpoint'] = heat_endpoint
         context['resource_names'] = json.dumps(resource_names)
+        context['prebuilt_configs'] = hotui_api.to_json([{
+                'name': c['name'],
+                'template': get_template(c['path']),
+                'icon': c['icon']
+            } for c in prebuilt_configs])
                     
         return context

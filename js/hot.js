@@ -12,55 +12,74 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-var createHOT;
+HotUI.HOT = {};
 
-$(function () {
-    var resourceTypeObj,
-        neededResources = [];
+(function () {
+    var hot = HotUI.HOT,
+        elementSchema,
+        rpElementSchema,
+        primitiveExtension = {
+            create: function (json, parameters) {
+                var self = Barricade.Primitive.create.call(this, json,
+                                                           parameters);
+                hot.Primitive.call(self);
+                return self;
+            }
+        };
 
-    try {
-        resourceTypeObj = JSON.parse(localStorage.getItem('resourceTypes'));
-        if (resourceTypeObj === null || typeof resourceTypeObj !== 'object' ||
-                resourceTypeObj instanceof Array) {
-            resourceTypeObj = {};
+    hot.Primitive = Barricade.Blueprint.create(function () {});
+
+    hot.Primitive._schema = {}; // QUICK HACK
+
+    hot.Primitive.Factory = function (json, parameters) {
+        var type = Barricade.getType(json);
+
+        if (json === undefined || type === String) {
+            return hot.Primitive.string.create(json, parameters);
+        } else if (type === Boolean) {
+            return hot.Primitive.bool.create(json, parameters);
+        } else if (type === Number) {
+            return hot.Primitive.number.create(json, parameters);
+        } else if (type === Array) {
+            return hot.Primitive.array.create(json, parameters);
+        } else if (type === Object) {
+            return hot.Primitive.object.create(json, parameters);
         }
-    } catch (e) {
-        resourceTypeObj = {};
-    }
+    };
 
-    HOTUI_RESOURCE_NAMES.forEach(function (type) {
-        if (!resourceTypeObj.hasOwnProperty(type)) {
-            neededResources.push(type);
+    elementSchema = {
+        '@class': hot.Primitive,
+        '@factory': hot.Primitive.Factory
+    };
+
+    hot.Primitive.string = Barricade.Primitive.extend(primitiveExtension,
+                                                      {'@type': String});
+    hot.Primitive.bool = Barricade.Primitive.extend(primitiveExtension,
+                                                    {'@type': Boolean});
+    hot.Primitive.number = Barricade.Primitive.extend(primitiveExtension,
+                                                      {'@type': Number});
+    hot.Primitive.array = Barricade.Array.extend({
+        create: function (json, parameters) {
+            var self = Barricade.Array.create.call(this, json, parameters);
+            hot.Primitive.call(self);
+            return self;
         }
+    }, {
+        '@type': Array,
+        '*': elementSchema
     });
 
-    if (neededResources.length > 0) {
-        jQuery.ajax({
-            url: ENDPOINTS.resourceTypeShow + STACK_REGION + '/' +
-                neededResources.join(','),
-            success: function(data) {
-                Object.keys(data).forEach(function (type) {
-                    resourceTypeObj[type] = data[type];
-                });
-
-                localStorage.setItem('resourceTypes',
-                                     JSON.stringify(resourceTypeObj));
-            },
-            async: false
-        });
-    }
-
-    HotUI.HOT = createHOT(resourceTypeObj);
-});
-
-createHOT = function (resourceTypeObj) {
-    // create namespace
-    var hot = {};
-
-    //
-    // Set up ResourceTypes so that different Resource classes can be created
-    // later.
-    //
+    hot.Primitive.object = Barricade.MutableObject.extend({
+        create: function (json, parameters) {
+            var self = Barricade.MutableObject
+                                .create.call(this, json, parameters);
+            hot.Primitive.call(self);
+            return self;
+        }
+    }, {
+        '@type': Object,
+        '?': elementSchema
+    });
 
     hot.ResourcePropertyWrapper = Barricade.Base.extend({
         create: function (json, parameters) {
@@ -163,9 +182,45 @@ createHOT = function (resourceTypeObj) {
             }
             return searchValue(this.getValue());
         },
-        toJSON: function (ignoreUnused) {
-            return this._value.toJSON(ignoreUnused);
+        toJSON: function (options) {
+            return this._value.toJSON(options);
         }
+    });
+
+    // Extension for Resource properties that have schemaless containers
+    hot.Primitive.FactoryForResourceProperty = function (json, parameters) {
+        var type = Barricade.getType(json);
+
+        function getInnerClass() {
+            if (json === undefined || type === String) {
+                return hot.Primitive.string;
+            } else if (type === Boolean) {
+                return hot.Primitive.bool;
+            } else if (type === Number) {
+                return hot.Primitive.number;
+            } else if (type === Array) {
+                return hot.Primitive.arrayOfRP;
+            } else if (type === Object) {
+                return hot.Primitive.objectOfRP;
+            }
+        }
+
+        return hot.ResourcePropertyWrapper.extend({
+            _innerClass: getInnerClass()
+        }, {}).create(json, parameters);
+    };
+
+    rpElementSchema = {
+        '@class': hot.ResourcePropertyWrapper,
+        '@factory': hot.Primitive.FactoryForResourceProperty
+    };
+
+    hot.Primitive.arrayOfRP = hot.Primitive.array.extend({}, {
+        '*': rpElementSchema
+    });
+
+    hot.Primitive.objectOfRP = hot.Primitive.object.extend({}, {
+        '?': rpElementSchema
     });
 
     function constraintFactory(constraintObj) {
@@ -214,12 +269,8 @@ createHOT = function (resourceTypeObj) {
                 },
                 'allowed_values': function (constraint) {
                     return function (val) {
-                        console.log((constraint.indexOf(val) > -1) ||
-                            ('Value must be one of ' +
-                             constraint.join(', ')));
                         return (constraint.indexOf(val) > -1) ||
-                            ('Value must be one of ' +
-                             constraint.join(', '));
+                            ('Value must be one of ' + constraint.join(', '));
                     };
                 },
                 'allowed_pattern': function (constraint) {
@@ -234,32 +285,23 @@ createHOT = function (resourceTypeObj) {
                 }
             };
 
-        function getConstraint(constraintObj) {
-            for (var t in types) {
-                if (constraintObj.hasOwnProperty(t)) {
-                    return types[t](constraintObj[t]);
-                }
+        for (var t in types) {
+            if (constraintObj.hasOwnProperty(t)) {
+                return types[t](constraintObj[t]);
             }
-
-            console.log('Constraint type not found: ', constraintObj);
-            return function () { return true; };
         }
+
+        console.log('Constraint type not found: ', constraintObj);
+        return function () { return true; };
     }
 
     hot.ResourcePropertyFactory = function (json, parameters) {
         if (!json.hasOwnProperty('schema')) {
             if (json.type === 'list') {
-                json.schema = {
-                    '*': {
-                        'type': 'string' // No '@'. This fixes missing
-                                         // resource_type_show schema
-                    }
-                };
+                return hot.ResourceProperty_list2.create(json, parameters);
+            } else if (json.type === 'map') {
+                return hot.ResourceProperty_map2.create(json, parameters);
             }
-        }
-
-        if (json.type === 'map' && !json.hasOwnProperty('schema')) {
-            return hot.ResourceProperty_map2.create(json, parameters)
         }
         return hot['ResourceProperty_' + json.type].create(json, parameters);
     };
@@ -288,9 +330,15 @@ createHOT = function (resourceTypeObj) {
                     this.get('schema').each(function (i, prop) {
                         schema[prop.getID()] = prop.getSchema();
                     });
+                } else {
+                    schema['?'] = rpElementSchema;
                 }
             } else if (schema['@type'] === Array) {
-                schema['*'] = this.get('schema').get('*').getSchema();
+                if (this.get('schema')) {
+                    schema['*'] = this.get('schema').get('*').getSchema();
+                } else {
+                    schema['*'] = rpElementSchema;
+                }
             }
 
             return {
@@ -331,6 +379,8 @@ createHOT = function (resourceTypeObj) {
         }
     });
 
+    hot.ResourceProperty_list2 = hot.ResourceProperty.extend({}, {
+        'default': {'@type': Array}});
     hot.ResourceProperty_map2 = hot.ResourceProperty.extend({}, {
         'default': {'@type': Object}});
     hot.ResourceProperty_string = hot.ResourceProperty.extend({}, {
@@ -361,7 +411,11 @@ createHOT = function (resourceTypeObj) {
             if (this.getID() === 'OS::Heat::ResourceGroup') {
                 propertySchema.resource_def = {
                     '@type': Object,
-                    'type': {'@type': String},
+                    'type': {
+                        '@class': hot.ResourcePropertyWrapper.extend({
+                            _innerClass: Barricade.create({'@type': String})
+                        }, {'@required': true})
+                    },
                     'properties': {
                         '@type': Object,
                         '@ref': {
@@ -369,23 +423,21 @@ createHOT = function (resourceTypeObj) {
                             needs: function () {
                                 return hot.ResourceProperties;
                             },
-                            resolver: function (json, properties) {
-                                var type = properties.get('resource_def')
-                                                     .get('type');
-                                console.log('resolving resource_def');
-                                type.on('change', function () {
-                                    console.log('resource def changed to ' +
-                                                type.get());
-                                    properties
-                                        .get('resource_def')
-                                        .set('properties',
-                                             hot.ResourcePropertiesFactory(
-                                                 undefined, undefined,
-                                                 type.get()));
-                                });
-
+                            getter: function (data) {
+                                var type = data.needed.get('resource_def')
+                                                      .get('type').getValue();
+                                if (type.instanceof(hot.GetParameter)) {
+                                    type = type.get('get_param');
+                                }
+                                return type;
+                            },
+                            processor: function (data) {
+                                var type = data.val;
+                                if (type.instanceof(hot.Parameter)) {
+                                    type = type.get('default');
+                                }
                                 return hot.ResourcePropertiesFactory(
-                                           json.get(), undefined, type.get());
+                                    data.standIn.get(), undefined, type.get());
                             }
                         }
                     }
@@ -396,12 +448,10 @@ createHOT = function (resourceTypeObj) {
         }
     }, {
         '@type': Object,
-
         'attributes': {
             '@type': Object,
             '?': {'@class': hot.ResourceAttribute}
         },
-
         'properties': {
             '@type': Object,
             '?': {
@@ -416,13 +466,6 @@ createHOT = function (resourceTypeObj) {
         '?': {'@class': hot.ResourceType}
     });
 
-    hot.resourceTypes = hot.ResourceTypes.create(resourceTypeObj);
-
-    //
-    // Now that the resource types have been processed, create everthing
-    // needed for a heat template.
-    //
-
     hot.IntrinsicFunctionFactory = function (json, parameters) {
         if (Barricade.getType(json) === Object) {
             if (json.hasOwnProperty('get_resource')) {
@@ -432,6 +475,11 @@ createHOT = function (resourceTypeObj) {
                 return hot.GetAttribute.create(json, parameters);
 
             } else if (json.hasOwnProperty('get_param')) {
+                if (json.get_param === 'OS::stack_name' ||
+                        json.get_param === 'OS::stack_id' ||
+                        json.get_param === 'OS::project_id') {
+                    return hot.GetParameterSpecial.create(json, parameters);
+                }
                 return hot.GetParameter.create(json, parameters);
 
             } else if (json.hasOwnProperty('get_file')) {
@@ -467,8 +515,9 @@ createHOT = function (resourceTypeObj) {
             '@ref': {
                 to: function () { return hot.Resource; },
                 needs: function () { return hot.Template; },
-                resolver: function (json, template) {
-                    return template.get('resources').getByID(json.get());
+                getter: function (data) {
+                    return data.needed.get('resources')
+                                      .getByID(data.standIn.get());
                 }
             }
         }
@@ -502,7 +551,7 @@ createHOT = function (resourceTypeObj) {
                 }
                 return [
                     resourceID,
-                    this.get('attribute')
+                    this.get('attribute').get()
                 ].concat(this.get('value').get());
             },
 
@@ -511,9 +560,9 @@ createHOT = function (resourceTypeObj) {
                 '@ref': {
                     to: function () { return hot.Resource; },
                     needs: function () { return hot.Template; },
-                    resolver: function (json, template) {
-                        return template.get('resources')
-                                       .getByID(json.get());
+                    getter: function (data) {
+                        return data.needed.get('resources')
+                                          .getByID(data.standIn.get());
                     }
                 }
             },
@@ -536,11 +585,17 @@ createHOT = function (resourceTypeObj) {
             '@ref': {
                 to: function () { return hot.Parameter; },
                 needs: function () { return hot.Template; },
-                resolver: function (json, template) {
-                    return template.get('parameters').getByID(json.get());
+                getter: function (data) {
+                    return data.needed.get('parameters')
+                                      .getByID(data.standIn.get());
                 }
             }
         }
+    });
+
+    // For OS::stack_name, OS::stack_id, and OS::project_id pseudo parameters
+    hot.GetParameterSpecial = hot.IntrinsicFunction.extend({}, {
+        'get_param': {'@type': String}
     });
 
     hot.GetFile = hot.IntrinsicFunction.extend({}, {
@@ -578,39 +633,33 @@ createHOT = function (resourceTypeObj) {
         'resource_facade': {'@type': String}
     });
 
-    hot.ResourceProperties = Barricade.ImmutableObject.extend({});
+    hot.ResourceProperties = Barricade.ImmutableObject.extend({
+        canConnectTo: function (typeName) {
+            return typeName in this._automaticConnections;
+        },
+        getConnector: function (typeName) {
+            return this._automaticConnections[typeName];
+        }
+    });
 
     hot.ResourcePropertiesFactory = function (json, parameters, type) {
-        var propertyClass = hot['ResourceProperties_' + type],
+        var propertyClass = hot.ResourceProperties.Normal[type] ||
+                hot.ResourceProperties.Custom[type] ||
+                hot.ResourceProperties.Null,
             propertiesOut;
-
-        if (!propertyClass) {
-            propertyClass = hot.ResourcePropertiesNull;
-        }
 
         return propertyClass.create(json, parameters);
     };
 
-    // Create various hot.ResourceProperties_<type> types
-    // (ex. hot["ResourceProperties_AWS::EC2::Instance"])
-    (function () {
-        var allResourceTypes = hot.resourceTypes.toArray();
-
-        // null resource type to aid ResourceGroup
-        allResourceTypes.push(hot.ResourceType.create({}, {id: 'null'}));
-
-        allResourceTypes.forEach(function (resourceType) {
-            hot['ResourceProperties_' + resourceType.getID()] =
-                hot.ResourceProperties.extend({
-                        getBackingType: function () {
-                            return resourceType;
-                        }
-                    },
-                    resourceType.getSchema());
-        });
-    }());
-
     hot.Resource = Barricade.ImmutableObject.extend({
+        _endsWith: function (str, suffix) {
+            return str.indexOf(suffix, str.length - suffix.length) !== -1;
+        },
+        _getTypeValue: function (typeObj) {
+            return typeObj.getValue().instanceof(hot.GetParameter)
+                ? typeObj.getValue().get('get_param').get('default').get()
+                : typeObj.getValue().get();
+        },
         getProperties: function () {
             return this.get('properties');
         },
@@ -618,12 +667,25 @@ createHOT = function (resourceTypeObj) {
             return this.getProperties().get(property);
         },
         isResourceGroup: function () {
-            return this.get('type').get() === 'OS::Heat::ResourceGroup';
+            return this._getTypeValue(this.get('type')) ===
+                'OS::Heat::ResourceGroup';
+        },
+        isProviderResource: function () {
+            var type = this.getType();
+            return this._endsWith(type, '.yaml') ||
+                   this._endsWith(type, '.template');
         },
         getType: function () {
-            return this.isResourceGroup()
-                ? this.getProperty('resource_def').get('type').get()
-                : this.get('type').get();
+            return this._getTypeValue(this.isResourceGroup()
+                        ? this.getProperty('resource_def').get('type')
+                        : this.get('type'));
+        },
+        getShortType: function () {
+            var type = this.getType();
+            if (this.isProviderResource()) {
+                return type.split('/').pop().split('.')[0];
+            }
+            return type.split('::')[2];
         },
         getAttributes: function () {
             var attributes = this.getProperties().getBackingType()
@@ -655,13 +717,21 @@ createHOT = function (resourceTypeObj) {
             }
             return getIntrinsics(this.getProperties());
         },
-        connectTo: function (resource) {
-            this.getProperties().connectTo(resource);
-            resource.getProperties().connectTo(this);
+        canConnectTo: function (resource, checkBothWays) {
+            return this.getProperties().canConnectTo(resource.getType()) ||
+                (checkBothWays !== false && resource.canConnectTo(this, false));
+        },
+        connectTo: function (res, tryBothWays) {
+            var connector = this.getProperties().getConnector(res.getType());
+            if (connector) {
+                connector(this, res);
+            } else if (tryBothWays !== false) {
+                res.connectTo(this, false);
+            }
         },
         _docsBaseURL: "http://docs.rs-heat.com/raxdox/",
         getDocsLink: function () {
-            var resourceType = this.get('type').get(),
+            var resourceType = this.getType(),
                 nameTokens = resourceType.split('::'),
                 resourceBase;
             if (nameTokens[0] === 'OS') {
@@ -678,25 +748,32 @@ createHOT = function (resourceTypeObj) {
     }, {
         '@type': Object,
 
-        'type': {'@type': String},
+        'type': {
+            '@class': hot.ResourcePropertyWrapper.extend({
+                _innerClass: Barricade.create({'@type': String})
+            }, {'@required': true})
+        },
         'properties': {
             '@type': Object,
             '@ref': {
                 to: hot.ResourceProperties,
                 needs: function () { return hot.Resource; },
-                resolver: function (json, resource) {
-                    var type = resource.get('type');
+                getter: function (data) {
+                    var type = data.needed.get('type').getValue();
+                    if (type.instanceof(hot.GetParameter)) {
+                        type = type.get('get_param');
+                    }
+                    return type;
+                },
+                processor: function (data) {
+                    var type = data.val;
 
-                    type.on('change', function () {
-                        console.log('type changed to ' + type.get());
-                        resource.set('properties',
-                                     hot.ResourcePropertiesFactory(undefined,
-                                                                   undefined,
-                                                                   type.get()));
-                    });
+                    if (type.instanceof(hot.Parameter)) {
+                        type = type.get('default');
+                    }
 
-                    return hot.ResourcePropertiesFactory(json.get(), undefined,
-                                                         type.get());
+                    return hot.ResourcePropertiesFactory(
+                        data.standIn.get(), undefined, type.get());
                 }
             }
         },
@@ -713,6 +790,12 @@ createHOT = function (resourceTypeObj) {
                 } else {
                     return json;
                 }
+            },
+            '@toJSON': function (options) {
+                if (this.toArray().length === 1) {
+                    return this.get(0).toJSON(options);
+                }
+                return Barricade.Array.toJSON.call(this, options);
             },
             '*': {'@type': String}
         },
@@ -821,6 +904,7 @@ createHOT = function (resourceTypeObj) {
         },
         'default': {
             '@type': Object,
+            '@required': false,
             // default can be various types, so wrap it in an object to
             // make Barricade happy
             '@inputMassager': function (json) {
@@ -829,7 +913,10 @@ createHOT = function (resourceTypeObj) {
             '@ref': {
                 to: hot.ParameterDefault,
                 needs: function () { return hot.Parameter; },
-                resolver: function (json, parameter) {
+                getter: function (data) {
+                    return data.needed.get('type');
+                },
+                processor: function (data) {
                     var types = {
                             'string': hot.StringParameterDefault,
                             '': hot.StringParameterDefault,
@@ -839,9 +926,9 @@ createHOT = function (resourceTypeObj) {
                             'json': hot.ObjectParameterDefault,
                             'boolean': hot.BooleanParameterDefault,
                         },
-                        type = parameter.get('type').get();
+                        type = data.val.get();
 
-                    return types[type].create(json.get().value);
+                    return types[type].create(data.standIn.get().value);
                 }
             }
         },
@@ -861,19 +948,26 @@ createHOT = function (resourceTypeObj) {
 
     hot.ParameterGroup = Barricade.create({
         '@type': Object,
-
         'label': {'@type': String},
-        'description': {'@type': String},
+        'description': {
+            '@type': String,
+            '@required': false
+        },
         'parameters': {
             '@type': Array,
+            '@toJSON': function () {
+                return this.toArray().map(function (param) {
+                    return param.getID();
+                });
+            },
             '*': {
                 '@type': String,
                 '@ref': {
                     to: hot.Parameter,
                     needs: function () { return hot.Template; },
-                    resolver: function (json, template) {
-                        return template.get('parameters')
-                                       .getByID(json.get());
+                    getter: function (data) {
+                        return data.needed.get('parameters')
+                                          .getByID(data.standIn.get());
                     }
                 }
             }
@@ -919,73 +1013,129 @@ createHOT = function (resourceTypeObj) {
         }
     });
 
-    (function () {
-        var elementSchema,
-            primitiveExtension = {
-                create: function (json, parameters) {
-                    var self = Barricade.Primitive.create.call(this, json,
-                                                               parameters);
-                    hot.Primitive.call(self);
-                    return self;
-                }
+    hot.ProviderTemplate = Barricade.ImmutableObject.extend({
+        getSchema: function () {
+            function getActualType(type) {
+                var types = {
+                    json: 'map',
+                    comma_delimited_list: 'list'
+                };
+                return types[type] || type;
+            }
+
+            return {
+                properties: this.get('parameters').toArray().reduce(
+                    function (objOut, param) {
+                        objOut[param.getID()] = {
+                            description: param.get('description').get(),
+                            type: getActualType(param.get('type').get())
+                        };
+                        return objOut;
+                    }, {}),
+                attributes: this.get('outputs').toArray().reduce(
+                    function (objOut, output) {
+                        objOut[output.getID()] = {
+                            description: output.get('description').get()
+                        };
+                        return objOut;
+                    }, {})
             };
+        }
+    }, {
+        '@type': Object,
 
-        hot.Primitive = Barricade.Blueprint.create(function () {});
-
-        hot.Primitive._schema = {}; // QUICK HACK
-
-        hot.Primitive.Factory = function (json, parameters) {
-            var type = Barricade.getType(json);
-
-            if (json === undefined || type === String) {
-                return hot.Primitive.string.create(json, parameters);
-            } else if (type === Boolean) {
-                return hot.Primitive.bool.create(json, parameters);
-            } else if (type === Number) {
-                return hot.Primitive.number.create(json, parameters);
-            } else if (type === Array) {
-                return hot.Primitive.Array.create(json, parameters);
-            } else if (type === Object) {
-                return hot.Primitive.object.create(json, parameters);
-            }
-        };
-
-        elementSchema = {
-            '@class': hot.Primitive,
-            '@factory': hot.Primitive.Factory
-        };
-
-        hot.Primitive.string = Barricade.Primitive.extend(primitiveExtension,
-                                                          {'@type': String});
-        hot.Primitive.bool = Barricade.Primitive.extend(primitiveExtension,
-                                                        {'@type': Boolean});
-        hot.Primitive.number = Barricade.Primitive.extend(primitiveExtension,
-                                                          {'@type': Number});
-        hot.Primitive.Array = Barricade.Array.extend({
-            create: function (json, parameters) {
-                var self = Barricade.Array.create.call(this, json, parameters);
-                hot.Primitive.call(self);
-                return self;
-            }
-        }, {
-            '@type': Array,
-            '*': elementSchema
-        });
-
-        hot.Primitive.object = Barricade.MutableObject.extend({
-            create: function (json, parameters) {
-                var self = Barricade.MutableObject
-                                    .create.call(this, json, parameters);
-                hot.Primitive.call(self);
-                return self;
-            }
-        }, {
+        'heat_template_version': {'@type': String},
+        'description': {'@type': String, '@required': false},
+        'parameter_groups': {'@type': Array, '@required': false},
+        'resources': {'@type': Object},
+        'parameters': {
             '@type': Object,
-            '?': elementSchema
-        });
+            '?': {'@class': hot.Parameter}
+        },
+        'outputs': {
+            '@type': Object,
+            '@required': false,
+            '?': {
+                '@class': hot.Output.extend({}, {
+                    'value': {
+                        '@class': hot.Primitive,
+                        '@factory': hot.Primitive.Factory
+                    }
+                })
+            }
+        }
+    });
 
-    }());
+    // Used to find URLs of templates to load and turn into child templates
+    hot.ProviderTemplateHelper = hot.Template.extend({
+        getProviderTemplateURLs: function () {
+            return this.get('resources').toArray().filter(function (res) {
+                return res.isProviderResource();
+            }).map(function (res) {
+                return res.getType();
+            });
+        }
+    }, {
+        // Essentially, remove any unncessary reference resolving
+        '@type': Object,
+        'parameter_groups': {'@type': Array, '@required': false},
+        'resources': {
+            '@type': Object,
+            '?': {
+                '@class': hot.Resource.extend({}, {
+                    'properties': {'@type': Object, '@required': false},
+                    'depends_on': {
+                        '@type': Array,
+                        '@required': false,
+                        '@inputMassager': function (json) {
+                            return json instanceof Array ? json : [json];
+                        }
+                    },
+                })
+            }
+        },
+        'outputs': {'@type': Object, '@required': false}
+    });
 
-    return hot;
+    hot.createResourceClass = function (resourceType) {
+        return hot.ResourceProperties.extend({
+                getBackingType: function () {
+                    return resourceType;
+                },
+                _automaticConnections:
+                    HOTUI_RESOURCE_CONNECTIONS[resourceType.getID()] || {}
+            },
+            resourceType.getSchema());
+    };
 
-};
+    hot.createProviderResourceClass = function (providerTemplateJSON) {
+        var pTemplate = hot.ProviderTemplate.create(providerTemplateJSON),
+            resType = hot.ResourceType.create(pTemplate.getSchema());
+        return hot.createResourceClass(resType);
+    };
+}());
+
+function createHOT(resourceTypeObj) {
+    var hot = HotUI.HOT,
+        allResourceTypes,
+        providerTemplates = HOTUI_PROVIDER_TEMPLATES;
+
+    hot.ResourceProperties.Normal = {};
+    hot.ResourceProperties.Custom = {};
+
+    Object.keys(providerTemplates).forEach(function (name) {
+        hot.ResourceProperties.Custom[name] =
+            hot.createProviderResourceClass(providerTemplates[name]);
+    });
+
+    hot.resourceTypes = hot.ResourceTypes.create(resourceTypeObj);
+
+    // null resource type to aid ResourceGroup
+    hot.ResourceProperties.Null =
+        hot.createResourceClass(hot.ResourceType.create({}, {id: 'null'}));
+
+    hot.resourceTypes.toArray().forEach(function (resType) {
+        hot.ResourceProperties.Normal[resType.getID()] =
+            hot.createResourceClass(resType);
+    });
+}
